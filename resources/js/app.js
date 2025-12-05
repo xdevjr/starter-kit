@@ -1,4 +1,5 @@
 import "./bootstrap";
+import 'primeicons/primeicons.css'
 import "../css/app.css";
 
 import { createApp, h } from "vue";
