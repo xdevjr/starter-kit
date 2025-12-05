@@ -19,6 +19,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Illuminate\Http\RedirectResponse::macro('withToast', function ($severity, $summary, $detail, $life = 3000) {
+            return $this->with('toast', [
+                'severity' => $severity,
+                'summary' => $summary,
+                'detail' => $detail,
+                'life' => $life,
+            ]);
+        });
     }
 }

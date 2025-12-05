@@ -1,10 +1,11 @@
 import "./bootstrap";
-import 'primeicons/primeicons.css'
+import "primeicons/primeicons.css";
 import "../css/app.css";
 
 import { createApp, h } from "vue";
 import { createInertiaApp } from "@inertiajs/vue3";
 import PrimeVue from "primevue/config";
+import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
 
 // Função para carregar as traduções
@@ -23,9 +24,16 @@ const loadLocale = async (locale) => {
 };
 
 createInertiaApp({
-    resolve: (name) => {
+    resolve: async (name) => {
         const pages = import.meta.glob("./Pages/**/*.vue", { eager: true });
-        return pages[`./Pages/${name}.vue`];
+        const page = pages[`./Pages/${name}.vue`];
+
+        if (!page.default.layout) {
+            const AppLayout = await import("./Layouts/AppLayout.vue");
+            page.default.layout = AppLayout.default;
+        }
+
+        return page;
     },
     title: (title) =>
         title
@@ -46,6 +54,7 @@ createInertiaApp({
                 },
                 locale: translations,
             })
+            .use(ToastService)
             .mount(el);
     },
 });
