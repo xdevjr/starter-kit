@@ -1,59 +1,268 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laravel Starter Kit
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Um starter kit completo e moderno para projetos Laravel, pré-configurado com as melhores ferramentas e práticas do ecossistema.
 
-## About Laravel
+## 🚀 Stack Tecnológica
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Este starter kit vem pré-configurado com:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Backend
+- **Laravel 12** - Framework PHP moderno e elegante
+- **PHP 8.2+** - Versão mais recente do PHP
+- **SQLite** - Banco de dados padrão (fácil de trocar)
+- **Pest** - Framework de testes moderno e expressivo
+- **Laravel Pint** - Code style fixer opinativo
+- **Laravel Boost** - Ferramenta de desenvolvimento com IA
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Frontend
+- **Vue 3** - Framework JavaScript progressivo
+- **Inertia.js** - Monolito moderno sem a complexidade de uma API
+- **Vite** - Build tool extremamente rápido
+- **Tailwind CSS 4** - Framework CSS utility-first
+- **PrimeVue 4** - Biblioteca de componentes UI ricos
+- **PrimeIcons** - Conjunto completo de ícones
 
-## Learning Laravel
+### DevOps
+- **Laravel Sail** - Ambiente Docker leve
+- **Concurrently** - Execução simultânea de comandos
+- **Auto-import** - Resolução automática de componentes Vue
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## 📋 Pré-requisitos
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP >= 8.2
+- Composer
+- Node.js >= 18
+- NPM ou Yarn
 
-## Laravel Sponsors
+## 🔧 Instalação
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 1. Clone ou baixe o repositório
 
-### Premium Partners
+```bash
+git clone <seu-repositorio>
+cd starter-kit
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 2. Instalação rápida com Composer
 
-## Contributing
+```bash
+composer setup
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Este comando irá:
+- Instalar dependências PHP
+- Criar arquivo `.env` (se não existir)
+- Gerar chave da aplicação
+- Executar migrations
+- Instalar dependências Node.js
+- Compilar assets frontend
 
-## Code of Conduct
+### 3. Instalação manual (alternativa)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# Backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
 
-## Security Vulnerabilities
+# Frontend
+npm install
+npm run build
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 🎯 Uso
 
-## License
+### Desenvolvimento
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+#### Opção 1: Ambiente completo (recomendado)
+
+Execute servidor, queue worker e Vite simultaneamente:
+
+```bash
+composer dev
+```
+
+Isso iniciará:
+- **Servidor Laravel** em `http://localhost:8000`
+- **Queue Worker** para processar jobs
+- **Vite Dev Server** com hot reload
+
+#### Opção 2: Serviços individuais
+
+```bash
+# Servidor Laravel
+php artisan serve
+
+# Vite (em outro terminal)
+npm run dev
+
+# Queue Worker (em outro terminal, se necessário)
+php artisan queue:listen
+```
+
+### Build de Produção
+
+```bash
+npm run build
+```
+
+### Testes
+
+```bash
+composer test
+# ou
+php artisan test
+```
+
+## 🏗️ Estrutura do Projeto
+
+```
+├── app/
+│   ├── Http/Controllers/     # Controladores da aplicação
+│   ├── Models/                # Modelos Eloquent
+│   └── Providers/             # Service Providers
+├── resources/
+│   ├── js/
+│   │   ├── Components/        # Componentes Vue
+│   │   ├── Composables/       # Composables Vue
+│   │   ├── Pages/             # Páginas Inertia
+│   │   └── app.js             # Entry point JS
+│   ├── css/
+│   │   └── app.css            # Estilos globais
+│   └── views/
+│       └── app.blade.php      # Template principal Inertia
+├── routes/
+│   └── web.php                # Rotas web
+├── database/
+│   ├── migrations/            # Migrations do banco
+│   ├── factories/             # Factories para testes
+│   └── seeders/               # Seeders
+├── tests/                     # Testes Pest
+└── lang/                      # Arquivos de tradução (pt-BR incluído)
+```
+
+## 🌐 Internacionalização
+
+O projeto já vem com traduções em português brasileiro (pt-BR) incluídas através do pacote `lucascudo/laravel-pt-br-localization`.
+
+Para alterar o idioma padrão, edite o arquivo `.env`:
+
+```env
+APP_LOCALE=pt_BR
+APP_FALLBACK_LOCALE=pt_BR
+```
+
+## 🎨 Componentes UI
+
+Este starter kit usa **PrimeVue** com auto-import configurado. Você pode usar qualquer componente PrimeVue sem importação manual:
+
+```vue
+<template>
+    <Button label="Clique aqui" />
+    <DataTable :value="produtos" />
+</template>
+```
+
+Documentação PrimeVue: https://primevue.org/
+
+## 🧪 Testes
+
+O projeto usa Pest para testes. Exemplos estão em `tests/Feature/` e `tests/Unit/`.
+
+```bash
+# Executar todos os testes
+composer test
+
+# Executar com cobertura
+php artisan test --coverage
+
+# Executar testes específicos
+php artisan test --filter=ExampleTest
+```
+
+## 🐳 Docker (Laravel Sail)
+
+Se preferir usar Docker:
+
+```bash
+# Iniciar containers
+./vendor/bin/sail up -d
+
+# Executar comandos artisan
+./vendor/bin/sail artisan migrate
+
+# Executar npm
+./vendor/bin/sail npm run dev
+
+# Executar testes
+./vendor/bin/sail test
+```
+
+## 📦 Scripts Composer Úteis
+
+```bash
+composer setup    # Setup completo do projeto
+composer dev      # Ambiente de desenvolvimento completo
+composer test     # Executar testes
+```
+
+## 🔒 Segurança
+
+- Mantenha as dependências atualizadas regularmente
+- Nunca commite o arquivo `.env`
+- Use variáveis de ambiente para dados sensíveis
+- Revise o código antes de fazer deploy
+
+## 📝 Customização
+
+### Trocar banco de dados
+
+Edite `.env` e `config/database.php` para usar MySQL, PostgreSQL, etc.
+
+### Adicionar novos pacotes
+
+```bash
+# Backend
+composer require nome/pacote
+
+# Frontend
+npm install nome-pacote
+```
+
+### Configurar tema PrimeVue
+
+Edite `resources/js/app.js` para personalizar o tema PrimeVue.
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para:
+
+1. Fazer fork do projeto
+2. Criar uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
+5. Abrir um Pull Request
+
+## 📄 Licença
+
+Este projeto é open-source e está licenciado sob a [MIT License](https://opensource.org/licenses/MIT).
+
+## 🙏 Créditos
+
+Este starter kit é construído sobre os ombros de gigantes:
+
+- [Laravel](https://laravel.com)
+- [Vue.js](https://vuejs.org)
+- [Inertia.js](https://inertiajs.com)
+- [Tailwind CSS](https://tailwindcss.com)
+- [PrimeVue](https://primevue.org)
+- [Pest](https://pestphp.com)
+
+## 📞 Suporte
+
+Para questões e suporte:
+
+- Abra uma [issue](../../issues)
+- Consulte a [documentação do Laravel](https://laravel.com/docs)
+- Visite a [comunidade Laravel Brasil](https://laravel.com.br)
