@@ -50,10 +50,18 @@
 
                 <!-- CTA Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-                    <Button label="Criar Conta" icon="pi pi-user-plus" size="large"
-                        class="bg-blue-600 hover:bg-blue-700" @click="router.visit(route('register'))" />
-                    <Button label="Entrar" icon="pi pi-sign-in" severity="secondary" size="large" outlined
-                        @click="router.visit(route('login'))" />
+                    <template v-if="isAuthenticated">
+                        <Link :href="route('dashboard')" class="inline-flex">
+                        <Button label="Ir para o Dashboard" icon="pi pi-chart-bar" size="large"
+                            class="bg-emerald-600 hover:bg-emerald-700" />
+                        </Link>
+                    </template>
+                    <template v-else>
+                        <Button label="Criar Conta" icon="pi pi-user-plus" size="large"
+                            class="bg-blue-600 hover:bg-blue-700" @click="router.visit(route('register'))" />
+                        <Button label="Entrar" icon="pi pi-sign-in" severity="secondary" size="large" outlined
+                            @click="router.visit(route('login'))" />
+                    </template>
                 </div>
             </div>
         </div>
@@ -67,7 +75,11 @@
 
 <script setup>
 import { Head, router, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import ThemeSelector from '@/Components/ThemeSelector.vue';
 import Logo from '@/Components/Logo.vue';
 import Button from 'primevue/button';
+
+const page = usePage();
+const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
 </script>
