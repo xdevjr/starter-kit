@@ -4,6 +4,7 @@ import "../css/app.css";
 
 import { createApp, h } from "vue";
 import { createInertiaApp } from "@inertiajs/vue3";
+import { ZiggyVue } from "ziggy-js";
 import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
@@ -43,8 +44,9 @@ createInertiaApp({
         const locale = import.meta.env.VITE_APP_LOCALE || "en";
         const translations = await loadLocale(locale);
 
-        createApp({ render: () => h(App, props) })
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
+            .use(ZiggyVue)
             .use(PrimeVue, {
                 theme: {
                     preset: Aura,
@@ -54,7 +56,8 @@ createInertiaApp({
                 },
                 locale: translations,
             })
-            .use(ToastService)
-            .mount(el);
+            .use(ToastService);
+
+        app.mount(el);
     },
 });

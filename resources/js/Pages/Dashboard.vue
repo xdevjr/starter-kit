@@ -7,7 +7,13 @@
         <!-- Header -->
         <header class="bg-white dark:bg-gray-800 shadow">
             <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+                <div class="flex items-center gap-3">
+                    <Link :href="route('home')">
+                    <Logo :width="40" :height="40" variant="default"
+                        class="hover:opacity-80 transition-opacity cursor-pointer" />
+                    </Link>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+                </div>
                 <div class="flex items-center gap-4">
                     <ThemeSelector />
                     <Button label="Sair" icon="pi pi-sign-out" severity="danger" @click="logout" />
@@ -63,11 +69,12 @@
 </template>
 
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, Link } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import ThemeSelector from '@/Components/ThemeSelector.vue';
+import Logo from '@/Components/Logo.vue';
 
 function logout() {
-    router.post('/logout');
+    router.post(route('logout'));
 }
 </script>

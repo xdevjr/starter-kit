@@ -1,0 +1,25 @@
+<svg width="64" height="64" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Circular Background -->
+    <circle cx="100" cy="100" r="100" fill="#1f2937" />
+    <!-- Laravel Layers (Red) -->
+    <path d="M100 30 L155 60 L155 80 L100 115 L45 80 L45 60 Z" fill="#FF2D20" />
+    <!-- Vue V Shape (Green) -->
+    <path d="M100 75 L75 105 L50 135 L100 175 L150 135 L125 105 Z" fill="#42B883" />
+    <!-- Inertia Link Symbol (Purple) -->
+    <circle cx="60" cy="100" r="10" fill="#9553E9" />
+    <circle cx="140" cy="100" r="10" fill="#9553E9" />
+    <line x1="70" y1="100" x2="130" y2="100" stroke="#9553E9" stroke-width="5" />
+    <!-- Tailwind Wave (Cyan) -->
+    <path d="M45 145 Q60 138 75 145 T105 145 T135 145 T155 145" stroke="#06b6d4" stroke-width="4"
+        fill="none" stroke-linecap="round" />
+    <path d="M45 157 Q60 150 75 157 T105 157 T135 157 T155 157" stroke="#06b6d4" stroke-width="4"
+        fill="none" stroke-linecap="round" opacity="0.6" />
+    <!-- PrimeVue P Symbol (Blue) -->
+    <circle cx="100" cy="45" r="15" fill="#2563eb" />
+    <rect x="92" y="45" width="16" height="26" fill="#2563eb" rx="2" />
+    <!-- Tech Stack Dots -->
+    <circle cx="40" cy="45" r="5" fill="#FF2D20" opacity="0.8" />
+    <circle cx="160" cy="45" r="5" fill="#42B883" opacity="0.8" />
+    <circle cx="40" cy="155" r="5" fill="#9553E9" opacity="0.8" />
+    <circle cx="160" cy="155" r="5" fill="#06b6d4" opacity="0.8" />
+</svg>

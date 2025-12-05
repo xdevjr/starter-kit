@@ -11,7 +11,12 @@
 
         <div class="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="text-center mb-6">
-                <i class="pi pi-key text-5xl text-green-600 dark:text-green-400 mb-4"></i>
+                <div class="flex justify-center mb-4">
+                    <Link :href="route('home')">
+                    <Logo :width="80" :height="80" variant="default"
+                        class="hover:opacity-80 transition-opacity cursor-pointer" />
+                    </Link>
+                </div>
                 <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Redefinir Senha</h2>
                 <p class="text-gray-600 dark:text-gray-400 mt-2">Digite sua nova senha</p>
             </div>
@@ -22,7 +27,7 @@
                     <Password v-model="form.password" fluid toggleMask placeholder="••••••••"
                         :invalid="!!form.errors.password" />
                     <small v-if="form.errors.password" class="text-red-500 text-sm mt-1 block">{{ form.errors.password
-                        }}</small>
+                    }}</small>
                 </div>
                 <div class="mb-4">
                     <label class="block mb-2 font-medium text-gray-900 dark:text-white">Confirme a Senha</label>
@@ -41,10 +46,11 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useForm, Head } from '@inertiajs/vue3';
+import { useForm, Head, Link } from '@inertiajs/vue3';
 import Password from 'primevue/password';
 import Button from 'primevue/button';
 import ThemeSelector from '@/Components/ThemeSelector.vue';
+import Logo from '@/Components/Logo.vue';
 
 const form = useForm({
     token: '',
@@ -56,7 +62,7 @@ const loading = ref(false);
 
 function submit() {
     loading.value = true;
-    form.post('/reset-password', {
+    form.post(route('reset-password.store'), {
         onFinish: () => loading.value = false,
     });
 }

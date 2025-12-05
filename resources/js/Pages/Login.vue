@@ -11,6 +11,12 @@
 
         <div class="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="text-center mb-6">
+                <div class="flex justify-center mb-4">
+                    <Link :href="route('home')">
+                    <Logo :width="80" :height="80" variant="default"
+                        class="hover:opacity-80 transition-opacity cursor-pointer" />
+                    </Link>
+                </div>
                 <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Login</h2>
                 <p class="text-gray-600 dark:text-gray-400 mt-2">Entre na sua conta</p>
             </div>
@@ -27,15 +33,16 @@
                     <Password v-model="form.password" fluid toggleMask :feedback="false" placeholder="••••••••"
                         :invalid="!!form.errors.password" />
                     <small v-if="form.errors.password" class="text-red-500 text-sm mt-1 block">{{ form.errors.password
-                        }}</small>
+                    }}</small>
                 </div>
                 <Button type="submit" label="Entrar" icon="pi pi-sign-in" class="w-full mb-4" :loading="loading" />
 
                 <div class="text-center space-y-2">
-                    <a href="/forgot-password" class="block text-blue-600 dark:text-blue-400 hover:underline">Esqueceu a
+                    <a :href="route('forgot-password')"
+                        class="block text-blue-600 dark:text-blue-400 hover:underline">Esqueceu a
                         senha?</a>
                     <div class="text-gray-600 dark:text-gray-400">
-                        Não tem conta? <a href="/register"
+                        Não tem conta? <a :href="route('register')"
                             class="text-blue-600 dark:text-blue-400 hover:underline font-medium">Registre-se</a>
                     </div>
                 </div>
@@ -46,11 +53,12 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useForm, Head } from '@inertiajs/vue3';
+import { useForm, Head, Link } from '@inertiajs/vue3';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import Button from 'primevue/button';
 import ThemeSelector from '@/Components/ThemeSelector.vue';
+import Logo from '@/Components/Logo.vue';
 
 const form = useForm({
     email: '',
@@ -60,7 +68,7 @@ const loading = ref(false);
 
 function submit() {
     loading.value = true;
-    form.post('/login', {
+    form.post(route('login.store'), {
         onFinish: () => loading.value = false,
     });
 }
