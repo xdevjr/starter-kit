@@ -1,11 +1,9 @@
 <template>
-    <div v-if="isAuthenticated" class="flex">
-        <Sidebar :items="sidebarItems" />
-        <!-- Conteúdo sem padding extra, sidebar não sobrepõe -->
-        <div class="flex-1 overflow-hidden">
+    <Sidebar v-if="isAuthenticated" :items="sidebarItems">
+        <template #content>
             <slot />
-        </div>
-    </div>
+        </template>
+    </Sidebar>
     <div v-else>
         <slot />
     </div>

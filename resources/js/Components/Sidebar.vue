@@ -1,239 +1,273 @@
 <template>
-    <!-- Botão Hamburguer Mobile/Tablet (oculto quando menu está aberto) -->
-    <!-- Visível em md (tablets) e lg (desktops menores) também -->
+    <!-- Overlay semi-transparente (apenas em tablet/mobile quando expandido) -->
     <Transition name="fade">
-        <button v-if="!isExpanded" @click="toggleSidebar"
-            class="lg:hidden fixed top-4 left-4 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-            style="z-index: 60;">
-            <i class="pi pi-bars text-gray-700 dark:text-gray-300 text-xl" />
-        </button>
+        <div v-if="isExpanded && !isAttached" @click="toggleSidebar" class="fixed inset-0 bg-black/40 lg:hidden z-40"
+            style="pointer-events: auto;" />
     </Transition>
 
-    <!-- Sidebar flutuante Desktop / Slide-in Mobile -->
-    <!-- Muda para overlay em telas pequenas para não sobrepor conteúdo -->
+    <!-- Container principal que envolve tudo -->
     <div :class="[
-        'transition-all duration-300',
-        // Desktop lg (1024px+): quando anexado fica sticky em toda a altura; quando flutuante fica centralizado
-        isAttached
-            ? 'lg:sticky lg:top-0 lg:left-0 lg:h-screen lg:shrink-0 lg:z-50'
-            : 'lg:fixed lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50',
-        // Tablet md (768px-1023px): drawer overlay quando expandido
-        'md:fixed md:inset-0 md:flex md:items-center md:justify-start md:z-50',
-        // Mobile: sempre overlay quando expandido
-        isExpanded ? 'fixed inset-0 flex items-center justify-start z-50' : 'hidden lg:block'
+        'h-screen flex transition-all duration-300',
+        // Quando anexado, usa flex normal ou reverse baseado na posição
+        isAttached ? (sidebarPosition === 'right' ? 'flex-row-reverse' : '') : ''
     ]">
-        <!-- Overlay semi-transparente (apenas em tablet/mobile) -->
-        <div v-if="isExpanded" @click="toggleSidebar" class="fixed inset-0 bg-black/40 lg:hidden pointer-events-auto"
-            style="z-index: 0;" />
+        <!-- Botão Hamburguer Mobile/Tablet (oculto quando menu está aberto) -->
+        <Transition name="fade">
+            <button v-if="!isExpanded && !isAttached" @click="toggleSidebar" :class="[
+                'lg:hidden fixed top-4 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer',
+                sidebarPosition === 'left' ? 'left-4' : 'right-4'
+            ]" style="z-index: 60;">
+                <i class="pi pi-bars text-gray-700 dark:text-gray-300 text-xl" />
+            </button>
+        </Transition>
 
-        <aside :class="[
-            'relative bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-hidden flex flex-col',
-            // Desktop: bordas arredondadas quando flutuante, sem bordas quando fixado
-            isAttached ? 'lg:rounded-none' : 'lg:rounded-xl',
-            // Altura: cheia quando anexado ou mobile, automática quando flutuante desktop
-            isAttached ? 'h-screen' : 'h-screen md:h-auto md:max-h-[90vh]',
-            // Largura responsiva
-            isExpanded ? 'w-64 md:w-72' : 'w-0 lg:w-16'
-        ]" style="z-index: 10;">
-            <!-- Header do Sidebar -->
-            <slot name="header" :isExpanded="isExpanded" :toggleSidebar="toggleSidebar">
-                <div
-                    class="flex items-center justify-between h-16 px-3 border-b border-gray-200 dark:border-gray-700 gap-2 min-w-0">
-                    <!-- Título visível apenas quando expandido -->
-                    <Transition name="fade">
-                        <span v-if="isExpanded" class="text-lg font-bold text-gray-900 dark:text-white truncate">
-                            Menu
-                        </span>
-                    </Transition>
-                    <!-- Botões sempre à direita -->
-                    <div class="flex items-center gap-1 ml-auto shrink-0">
-                        <!-- Botão para alternar entre flutuante e fixado (apenas desktop) -->
+        <!-- Sidebar flutuante Desktop / Slide-in Mobile -->
+        <div :class="[
+            'transition-all duration-300',
+            // Quando ANEXADO: fica sticky ocupando espaço no flex
+            isAttached
+                ? 'lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:z-50'
+                // Quando NÃO ANEXADO: flutuante fixo
+                : sidebarPosition === 'left'
+                    ? 'lg:fixed lg:left-2 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50'
+                    : 'lg:fixed lg:right-2 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50',
+            // Tablet: drawer overlay
+            sidebarPosition === 'left'
+                ? 'md:fixed md:inset-0 md:flex md:items-center md:justify-start md:z-50 md:pointer-events-none'
+                : 'md:fixed md:inset-0 md:flex md:items-center md:justify-end md:z-50 md:pointer-events-none',
+            // Mobile: respeita posição
+            sidebarPosition === 'left'
+                ? isExpanded ? 'fixed inset-0 flex items-center justify-start z-50 pointer-events-none' : 'hidden lg:block'
+                : isExpanded ? 'fixed inset-0 flex items-center justify-end z-50 pointer-events-none' : 'hidden lg:block'
+        ]">
+            <aside :class="[
+                'relative bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-hidden flex flex-col',
+                // Desktop: bordas arredondadas quando flutuante, sem bordas quando fixado
+                isAttached ? 'lg:rounded-none' : 'lg:rounded-xl',
+                // Altura: cheia quando anexado ou mobile, automática quando flutuante desktop
+                isAttached ? 'h-screen' : 'h-screen md:h-auto md:max-h-[90vh]',
+                // Posicionamento quando retraído (não anexado)
+                !isExpanded && !isAttached ? (sidebarPosition === 'left' ? 'lg:fixed lg:left-1 lg:top-1/2 lg:transform lg:-translate-y-1/2' : 'lg:fixed lg:right-1 lg:top-1/2 lg:transform lg:-translate-y-1/2') : '',
+                // Largura responsiva
+                isExpanded ? 'w-64 md:w-72' : 'w-0 lg:w-16',
+                // Pointer events: sempre ativo no aside
+                'pointer-events-auto'
+            ]" style="z-index: 10;">
+                <!-- Header do Sidebar -->
+                <slot name="header" :isExpanded="isExpanded" :toggleSidebar="toggleSidebar">
+                    <div
+                        class="flex items-center justify-between h-16 px-3 border-b border-gray-200 dark:border-gray-700 gap-2 min-w-0">
+                        <!-- Título visível apenas quando expandido -->
                         <Transition name="fade">
-                            <button v-if="isExpanded" @click="toggleAttached"
-                                class="hidden lg:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer items-center justify-center shrink-0"
-                                :title="isAttached ? 'Desafixar da lateral' : 'Afixar na lateral'">
-                                <i :class="[
-                                    'text-gray-600 dark:text-gray-400 text-sm',
-                                    isAttached ? 'pi pi-times' : 'pi pi-lock'
-                                ]" />
-                            </button>
+                            <span v-if="isExpanded" class="text-lg font-bold text-gray-900 dark:text-white truncate">
+                                Menu
+                            </span>
                         </Transition>
-                        <!-- Botão fechar/expandir -->
-                        <button @click="toggleSidebar" :class="[
-                            'p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer shrink-0'
-                        ]">
-                            <!-- Mobile: sempre X quando expandido -->
-                            <i class="lg:hidden! text-gray-600 dark:text-gray-400 text-sm"
-                                :class="isExpanded ? 'pi pi-times' : 'pi pi-bars'" />
-                            <!-- Desktop: chevron-left quando expandido, chevron-right quando retraído -->
-                            <i class="hidden! lg:block! text-gray-600 dark:text-gray-400 text-sm"
-                                :class="isExpanded ? 'pi pi-chevron-left' : 'pi pi-chevron-right'" />
-                        </button>
-                    </div>
-                </div>
-            </slot>
-
-            <!-- Menu Items -->
-            <nav :class="[
-                'overflow-y-auto overflow-x-hidden py-2 px-0',
-                // Em mobile, o menu cresce para preencher todo espaço disponível
-                // No desktop flutuante, limita a altura máxima para deixar rodapé visível
-                'flex-1 min-h-0',
-                isAttached ? 'lg:h-auto' : 'lg:max-h-[calc(90vh-13rem)]'
-            ]">
-                <template v-for="(item, index) in props.items" :key="index">
-                    <!-- Item com submenu -->
-                    <div v-if="item.submenu && item.submenu.length > 0" class="mx-2 mb-1">
-                        <!-- Versão expandida com submenu interno -->
-                        <button v-if="isExpanded" @click="toggleSubmenuByIndex(index)" :class="[
-                            'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer gap-4',
-                            'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        ]">
-                            <i :class="['text-lg shrink-0', item.icon]" />
-                            <div class="flex items-center justify-between flex-1 min-w-0">
-                                <span class="font-medium whitespace-nowrap truncate">{{ item.label }}</span>
-                                <i :class="[
-                                    'pi text-xs transition-transform shrink-0',
-                                    isSubmenuExpanded(index) ? 'pi-chevron-down' : 'pi-chevron-right'
-                                ]" />
-                            </div>
-                        </button>
-
-                        <!-- Versão retraída: expandir sidebar e mostrar submenu interno -->
-                        <div v-else>
-                            <button @click="openCollapsedSubmenu(index)"
-                                v-tooltip.right="{ value: item.label, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } }"
-                                :class="[
-                                    'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer justify-center',
-                                    'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                ]">
-                                <i :class="['text-lg shrink-0', item.icon]" />
+                        <!-- Botões sempre à direita -->
+                        <div class="flex items-center gap-1 ml-auto shrink-0">
+                            <!-- Botão para alternar entre flutuante e fixado (apenas desktop) -->
+                            <Transition name="fade">
+                                <button v-if="isExpanded" @click="toggleAttached"
+                                    class="hidden lg:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer items-center justify-center shrink-0"
+                                    :title="isAttached ? 'Desafixar da lateral' : 'Afixar na lateral'">
+                                    <i :class="[
+                                        'text-gray-600 dark:text-gray-400 text-sm',
+                                        isAttached ? 'pi pi-unlock' : 'pi pi-lock'
+                                    ]" />
+                                </button>
+                            </Transition>
+                            <!-- Botão para alternar posição esquerda/direita -->
+                            <Transition name="fade">
+                                <button v-if="isExpanded" @click="togglePosition"
+                                    class="hidden lg:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer items-center justify-center shrink-0"
+                                    :title="sidebarPosition === 'left' ? 'Mover para direita' : 'Mover para esquerda'">
+                                    <i :class="[
+                                        'text-gray-600 dark:text-gray-400 text-sm',
+                                        sidebarPosition === 'left' ? 'pi pi-arrow-right' : 'pi pi-arrow-left'
+                                    ]" />
+                                </button>
+                            </Transition>
+                            <!-- Botão fechar/expandir -->
+                            <button @click="toggleSidebar" :class="[
+                                'p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer shrink-0'
+                            ]">
+                                <!-- Mobile: sempre X quando expandido -->
+                                <i class="lg:hidden! text-gray-600 dark:text-gray-400 text-sm"
+                                    :class="isExpanded ? 'pi pi-times' : 'pi pi-bars'" />
+                                <!-- Desktop: chevrons baseados na posição -->
+                                <i class="hidden! lg:block! text-gray-600 dark:text-gray-400 text-sm" :class="sidebarPosition === 'left'
+                                    ? isExpanded ? 'pi pi-chevron-left' : 'pi pi-chevron-right'
+                                    : isExpanded ? 'pi pi-chevron-right' : 'pi pi-chevron-left'" />
                             </button>
                         </div>
+                    </div>
+                </slot>
 
-                        <!-- Submenu expandido (apenas no modo expandido) -->
-                        <Transition name="slide" v-if="isExpanded">
-                            <div v-if="isSubmenuExpanded(index)" class="mt-1 ml-4 space-y-1">
-                                <component v-for="(child, childIndex) in item.submenu" :key="childIndex"
-                                    :is="isStringAction(child.action) ? Link : 'button'"
-                                    :href="isStringAction(child.action) ? child.action : undefined"
-                                    @click="isStringAction(child.action) ? undefined : executeAction(child.action)"
-                                    :class="[
-                                        'w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm text-left',
-                                        isActionActive(child.action)
-                                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
-                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                <!-- Menu Items -->
+                <nav :class="[
+                    'overflow-y-auto overflow-x-hidden py-2 px-0',
+                    // Em mobile, o menu cresce para preencher todo espaço disponível
+                    // No desktop flutuante, limita a altura máxima para deixar rodapé visível
+                    'flex-1 min-h-0',
+                    isAttached ? 'lg:h-auto' : 'lg:max-h-[calc(90vh-13rem)]'
+                ]">
+                    <template v-for="(item, index) in props.items" :key="index">
+                        <!-- Item com submenu -->
+                        <div v-if="item.submenu && item.submenu.length > 0" class="mx-2 mb-1">
+                            <!-- Versão expandida com submenu interno -->
+                            <button v-if="isExpanded" @click="toggleSubmenuByIndex(index)" :class="[
+                                'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer gap-4',
+                                'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ]">
+                                <i :class="['text-lg shrink-0', item.icon]" />
+                                <div class="flex items-center justify-between flex-1 min-w-0">
+                                    <span class="font-medium whitespace-nowrap truncate">{{ item.label }}</span>
+                                    <i :class="[
+                                        'pi text-xs transition-transform shrink-0',
+                                        isSubmenuExpanded(index) ? 'pi-chevron-down' : 'pi-chevron-right'
+                                    ]" />
+                                </div>
+                            </button>
+
+                            <!-- Versão retraída: expandir sidebar e mostrar submenu interno -->
+                            <div v-else>
+                                <button :key="`${item.label}-${sidebarPosition}`" @click="openCollapsedSubmenu(index)"
+                                    v-tooltip="getTooltipConfig(item.label)" :class="[
+                                        'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer justify-center',
+                                        'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                     ]">
-                                    <i v-if="child.icon" :class="['text-sm shrink-0', child.icon]" />
-                                    <span class="truncate">{{ child.label }}</span>
-                                </component>
+                                    <i :class="['text-lg shrink-0', item.icon]" />
+                                </button>
                             </div>
-                        </Transition>
-                    </div>
 
-                    <!-- Item simples sem submenu -->
-                    <div v-else class="mx-2 mb-1">
-                        <component :is="isStringAction(item.action) ? Link : 'button'"
-                            :href="isStringAction(item.action) ? item.action : undefined"
-                            @click="isStringAction(item.action) ? undefined : executeAction(item.action)"
-                            v-tooltip.right="!isExpanded ? { value: item.label, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } } : undefined"
-                            :class="[
-                                'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer',
-                                isExpanded ? 'gap-4' : 'justify-center',
-                                isActionActive(item.action)
-                                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
-                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            ]">
-                            <i :class="['text-lg shrink-0', item.icon]" />
-                            <Transition name="fade">
-                                <span v-if="isExpanded" class="font-medium whitespace-nowrap truncate">
-                                    {{ item.label }}
-                                </span>
+                            <!-- Submenu expandido (apenas no modo expandido) -->
+                            <Transition name="slide" v-if="isExpanded">
+                                <div v-if="isSubmenuExpanded(index)" class="mt-1 ml-4 space-y-1">
+                                    <component v-for="(child, childIndex) in item.submenu" :key="childIndex"
+                                        :is="isStringAction(child.action) ? Link : 'button'"
+                                        :href="isStringAction(child.action) ? child.action : undefined"
+                                        @click="isStringAction(child.action) ? undefined : executeAction(child.action)"
+                                        :class="[
+                                            'w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm text-left',
+                                            isActionActive(child.action)
+                                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        ]">
+                                        <i v-if="child.icon" :class="['text-sm shrink-0', child.icon]" />
+                                        <span class="truncate">{{ child.label }}</span>
+                                    </component>
+                                </div>
                             </Transition>
-                        </component>
-                    </div>
-                </template>
-            </nav>
+                        </div>
 
-            <!-- Footer do Sidebar com Slot -->
-            <slot name="footer" :isExpanded="isExpanded" :user="user" :userInitials="userInitials"
-                :userFirstName="userFirstName" :logout="logout" :currentTheme="currentTheme" :setTheme="setTheme"
-                :cycleTheme="cycleTheme" :getCurrentThemeIcon="getCurrentThemeIcon"
-                :getCurrentThemeLabel="getCurrentThemeLabel" :themeOptions="themeOptions">
-                <div class="border-t border-gray-200 dark:border-gray-700 p-2 space-y-1 overflow-y-auto">
-                    <!-- User Section -->
-                    <div v-if="user" class="w-full overflow-hidden">
-                        <button @click="toggleUserSubmenu"
-                            v-tooltip.right="!isExpanded ? { value: userFirstName, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } } : undefined"
-                            :class="[
-                                'w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer',
-                                'hover:bg-gray-100 dark:hover:bg-gray-700'
-                            ]">
-                            <Avatar :label="userInitials" shape="circle"
-                                class="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100 shrink-0" />
-                            <div class="flex-1 min-w-0 text-left overflow-hidden" v-if="isExpanded">
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{
-                                    userFirstName
-                                }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
-                            </div>
-                            <i v-if="isExpanded" :class="[
-                                'pi text-xs transition-transform shrink-0',
-                                isUserSubmenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'
-                            ]" />
-                        </button>
-
-                        <Transition name="slide">
-                            <div v-if="isUserSubmenuExpanded && isExpanded" class="mt-2 space-y-1 overflow-hidden">
-                                <Link :href="route('profile.edit')" :class="[
-                                    'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm',
-                                    isActionActive(route('profile.edit'))
+                        <!-- Item simples sem submenu -->
+                        <div v-else class="mx-2 mb-1">
+                            <component :key="`${item.label}-${sidebarPosition}`"
+                                :is="isStringAction(item.action) ? Link : 'button'"
+                                :href="isStringAction(item.action) ? item.action : undefined"
+                                @click="isStringAction(item.action) ? undefined : executeAction(item.action)"
+                                v-tooltip="!isExpanded ? getTooltipConfig(item.label) : undefined" :class="[
+                                    'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer',
+                                    isExpanded ? 'gap-4' : 'justify-center',
+                                    isActionActive(item.action)
                                         ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
                                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                 ]">
-                                    <i class="pi pi-user text-sm shrink-0" />
-                                    <span class="truncate">Meu Perfil</span>
-                                </Link>
+                                <i :class="['text-lg shrink-0', item.icon]" />
+                                <Transition name="fade">
+                                    <span v-if="isExpanded" class="font-medium whitespace-nowrap truncate">
+                                        {{ item.label }}
+                                    </span>
+                                </Transition>
+                            </component>
+                        </div>
+                    </template>
+                </nav>
 
-                                <button @click="logout" :class="[
-                                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer',
-                                    'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950'
+                <!-- Footer do Sidebar com Slot -->
+                <slot name="footer" :isExpanded="isExpanded" :user="user" :userInitials="userInitials"
+                    :userFirstName="userFirstName" :logout="logout" :currentTheme="currentTheme" :setTheme="setTheme"
+                    :cycleTheme="cycleTheme" :getCurrentThemeIcon="getCurrentThemeIcon"
+                    :getCurrentThemeLabel="getCurrentThemeLabel" :themeOptions="themeOptions">
+                    <div class="border-t border-gray-200 dark:border-gray-700 p-2 space-y-1 overflow-y-auto">
+                        <!-- User Section -->
+                        <div v-if="user" class="w-full overflow-hidden">
+                            <button @click="toggleUserSubmenu"
+                                v-tooltip="!isExpanded ? getTooltipConfig(userFirstName) : undefined" :class="[
+                                    'w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer',
+                                    'hover:bg-gray-100 dark:hover:bg-gray-700'
                                 ]">
-                                    <i class="pi pi-sign-out text-sm shrink-0" />
-                                    <span class="truncate">Sair</span>
-                                </button>
-                            </div>
-                        </Transition>
-                    </div>
-
-                    <!-- Tema Section -->
-                    <div class="pt-2">
-                        <div v-if="isExpanded" class="w-full">
-                            <label
-                                class="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-2">Tema</label>
-                            <div class="p-selectbutton p-component p-buttonset flex gap-1 w-full">
-                                <button v-for="option in themeOptions" :key="option.value"
-                                    @click="setTheme(option.value)" :class="[
-                                        'flex-1 flex items-center justify-center p-2 rounded-md transition-colors text-sm font-medium border cursor-pointer',
-                                        currentTheme === option.value
-                                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 border-blue-300 dark:border-blue-700'
-                                            : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
-                                    ]" :title="option.label">
-                                    <i :class="option.icon"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div v-else>
-                            <button @click="cycleTheme"
-                                v-tooltip.right="!isExpanded ? { value: `Tema: ${getCurrentThemeLabel()}`, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } } : undefined"
-                                class="w-full flex items-center justify-center px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-                                <i :class="['text-lg shrink-0', getCurrentThemeIcon()]" />
+                                <Avatar :label="userInitials" shape="circle"
+                                    class="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100 shrink-0" />
+                                <div class="flex-1 min-w-0 text-left overflow-hidden" v-if="isExpanded">
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{
+                                        userFirstName
+                                        }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
+                                </div>
+                                <i v-if="isExpanded" :class="[
+                                    'pi text-xs transition-transform shrink-0',
+                                    isUserSubmenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'
+                                ]" />
                             </button>
+
+                            <Transition name="slide">
+                                <div v-if="isUserSubmenuExpanded && isExpanded" class="mt-2 space-y-1 overflow-hidden">
+                                    <Link :href="route('profile.edit')" :class="[
+                                        'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm',
+                                        isActionActive(route('profile.edit'))
+                                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    ]">
+                                        <i class="pi pi-user text-sm shrink-0" />
+                                        <span class="truncate">Meu Perfil</span>
+                                    </Link>
+
+                                    <button @click="logout" :class="[
+                                        'w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium cursor-pointer',
+                                        'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950'
+                                    ]">
+                                        <i class="pi pi-sign-out text-sm shrink-0" />
+                                        <span class="truncate">Sair</span>
+                                    </button>
+                                </div>
+                            </Transition>
+                        </div>
+
+                        <!-- Tema Section -->
+                        <div class="pt-2">
+                            <div v-if="isExpanded" class="w-full">
+                                <label
+                                    class="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-2">Tema</label>
+                                <div class="p-selectbutton p-component p-buttonset flex gap-1 w-full">
+                                    <button v-for="option in themeOptions" :key="option.value"
+                                        @click="setTheme(option.value)" :class="[
+                                            'flex-1 flex items-center justify-center p-2 rounded-md transition-colors text-sm font-medium border cursor-pointer',
+                                            currentTheme === option.value
+                                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                                                : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+                                        ]" :title="option.label">
+                                        <i :class="option.icon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-else>
+                                <button @click="cycleTheme"
+                                    v-tooltip="!isExpanded ? getTooltipConfig(`Tema: ${getCurrentThemeLabel()}`) : undefined"
+                                    class="w-full flex items-center justify-center px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+                                    <i :class="['text-lg shrink-0', getCurrentThemeIcon()]" />
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </slot>
-        </aside>
+                </slot>
+            </aside>
+        </div>
+
+        <!-- Conteúdo Principal -->
+        <div class="flex-1 overflow-y-auto overflow-x-hidden">
+            <slot name="content" />
+        </div>
     </div>
 </template>
 <script setup>
@@ -245,6 +279,7 @@ import Avatar from 'primevue/avatar';
 const page = usePage();
 const isExpanded = ref(false); // Inicia fechado em mobile
 const isAttached = ref(false); // Estado para sidebar fixado na lateral
+const sidebarPosition = ref('left'); // Posição da sidebar: 'left' ou 'right'
 const expandedMenus = ref([]);
 const { currentTheme, setTheme, THEMES } = useTheme();
 
@@ -295,6 +330,32 @@ const openCollapsedSubmenu = (index) => {
 };
 const isSubmenuExpanded = (index) => {
     return expandedMenusMap.value.get(getMenuKey(index)) || false;
+};
+
+// Computed para determinar a posição do tooltip
+const tooltipPosition = computed(() => sidebarPosition.value === 'left' ? 'right' : 'left');
+
+// Computed para as cores de borda do tooltip
+const tooltipArrowColor = computed(() => tooltipPosition.value === 'right' ? 'borderRightColor' : 'borderLeftColor');
+
+// Helper para criar tooltip com posição correta baseada em sidebarPosition - reactive
+const getTooltipConfig = (label) => {
+    // Força reatividade lendo os computeds
+    const pos = tooltipPosition.value;
+    const arrowProp = tooltipArrowColor.value;
+
+    return {
+        value: label,
+        position: pos,
+        pt: {
+            arrow: {
+                style: {
+                    [arrowProp]: '#111827'
+                }
+            },
+            text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2'
+        }
+    };
 };
 
 const isUserSubmenuExpanded = computed(() => expandedMenusMap.value.get(USER_MENU_KEY) || false);
@@ -371,11 +432,27 @@ const toggleAttached = () => {
     localStorage.setItem('sidebar-attached', JSON.stringify(isAttached.value));
 };
 
+const togglePosition = () => {
+    sidebarPosition.value = sidebarPosition.value === 'left' ? 'right' : 'left';
+    localStorage.setItem('sidebar-position', sidebarPosition.value);
+};
+
 // Carrega estado do localStorage ao montar
 onMounted(() => {
+    // Carrega estado da sidebar (expandido/retraído)
+    loadSidebarState();
+    window.addEventListener('resize', checkScreenSize);
+
+    // Carrega estado anexado
     const saved = localStorage.getItem('sidebar-attached');
     if (saved !== null) {
         isAttached.value = JSON.parse(saved);
+    }
+
+    // Carrega posição da sidebar
+    const savedPosition = localStorage.getItem('sidebar-position');
+    if (savedPosition !== null) {
+        sidebarPosition.value = savedPosition;
     }
 });
 
@@ -411,10 +488,6 @@ const checkScreenSize = () => {
     loadSidebarState();
 };
 
-onMounted(() => {
-    loadSidebarState();
-    window.addEventListener('resize', checkScreenSize);
-});
 
 onUnmounted(() => {
     window.removeEventListener('resize', checkScreenSize);
