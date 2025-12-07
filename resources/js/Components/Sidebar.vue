@@ -9,18 +9,14 @@
         </button>
     </Transition>
 
-    <!-- Overlay para fechar submenu flutuante (apenas quando há submenu ativo) -->
-    <Transition name="fade">
-        <div v-if="activeSubmenuCollapsedIndex !== null" @click="activeSubmenuCollapsedIndex = null"
-            class="fixed inset-0" style="z-index: 59;" />
-    </Transition>
-
     <!-- Sidebar flutuante Desktop / Slide-in Mobile -->
     <!-- Muda para overlay em telas pequenas para não sobrepor conteúdo -->
     <div :class="[
         'transition-all duration-300',
-        // Desktop lg (1024px+): pode ser relative (fixado) ou ignorar
-        isAttached ? 'lg:relative lg:shrink-0' : 'lg:fixed lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50',
+        // Desktop lg (1024px+): quando anexado fica sticky em toda a altura; quando flutuante fica centralizado
+        isAttached
+            ? 'lg:sticky lg:top-0 lg:left-0 lg:h-screen lg:shrink-0 lg:z-50'
+            : 'lg:fixed lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50',
         // Tablet md (768px-1023px): drawer overlay quando expandido
         'md:fixed md:inset-0 md:flex md:items-center md:justify-start md:z-50',
         // Mobile: sempre overlay quando expandido
@@ -34,8 +30,8 @@
             'relative bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-hidden flex flex-col',
             // Desktop: bordas arredondadas quando flutuante, sem bordas quando fixado
             isAttached ? 'lg:rounded-none' : 'lg:rounded-xl',
-            // Tablet/Mobile: drawer com altura cheia, Desktop: altura automática (ou cheia quando anexado)
-            isAttached ? 'h-screen' : 'h-screen lg:h-auto',
+            // Altura: cheia quando anexado ou mobile, automática quando flutuante desktop
+            isAttached ? 'h-screen' : 'h-screen md:h-auto md:max-h-[90vh]',
             // Largura responsiva
             isExpanded ? 'w-64 md:w-72' : 'w-0 lg:w-16'
         ]" style="z-index: 10;">
@@ -80,8 +76,10 @@
             <!-- Menu Items -->
             <nav :class="[
                 'overflow-y-auto overflow-x-hidden py-2 px-0',
-                // No modo anexado, o menu cresce para preencher o espaço
-                isAttached ? 'flex-1 min-h-0' : 'shrink-0'
+                // Em mobile, o menu cresce para preencher todo espaço disponível
+                // No desktop flutuante, limita a altura máxima para deixar rodapé visível
+                'flex-1 min-h-0',
+                isAttached ? 'lg:h-auto' : 'lg:max-h-[calc(90vh-13rem)]'
             ]">
                 <template v-for="(item, index) in props.items" :key="index">
                     <!-- Item com submenu -->
@@ -101,41 +99,26 @@
                             </div>
                         </button>
 
-                        <!-- Versão retraída com menu ao clicar -->
-                        <div v-else class="relative">
-                            <button @click="toggleCollapsedSubmenuByIndex(index)" :class="[
-                                'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer justify-center',
-                                'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            ]">
+                        <!-- Versão retraída: expandir sidebar e mostrar submenu interno -->
+                        <div v-else>
+                            <button @click="openCollapsedSubmenu(index)"
+                                v-tooltip.right="{ value: item.label, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } }"
+                                :class="[
+                                    'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer justify-center',
+                                    'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                ]">
                                 <i :class="['text-lg shrink-0', item.icon]" />
                             </button>
-
-                            <!-- Menu flutuante ao clicar - posicionado fora do overflow -->
-                            <Transition name="submenu">
-                                <div v-if="activeSubmenuCollapsedIndex === index"
-                                    class="fixed bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-1 whitespace-nowrap"
-                                    style="z-index: 60; left: calc(1rem + 4rem); top: 45%; transform: translateY(-50%);">
-                                    <div class="text-xs font-semibold text-gray-600 dark:text-gray-400 px-3 py-2">{{
-                                        item.label }}</div>
-                                    <button v-for="(child, childIndex) in item.submenu" :key="childIndex"
-                                        @click="executeAction(child.action); closeSubmenuAndMenu()" :class="[
-                                            'block w-full text-left px-3 py-2 rounded-md transition-colors text-sm font-medium',
-                                            isActionActive(child.action)
-                                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
-                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                        ]">
-                                        <i v-if="child.icon" :class="['text-sm mr-2', child.icon]" />{{ child.label
-                                        }}
-                                    </button>
-                                </div>
-                            </Transition>
                         </div>
 
                         <!-- Submenu expandido (apenas no modo expandido) -->
                         <Transition name="slide" v-if="isExpanded">
                             <div v-if="isSubmenuExpanded(index)" class="mt-1 ml-4 space-y-1">
-                                <button v-for="(child, childIndex) in item.submenu" :key="childIndex"
-                                    @click="executeAction(child.action)" :class="[
+                                <component v-for="(child, childIndex) in item.submenu" :key="childIndex"
+                                    :is="isStringAction(child.action) ? Link : 'button'"
+                                    :href="isStringAction(child.action) ? child.action : undefined"
+                                    @click="isStringAction(child.action) ? undefined : executeAction(child.action)"
+                                    :class="[
                                         'w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-sm text-left',
                                         isActionActive(child.action)
                                             ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
@@ -143,33 +126,31 @@
                                     ]">
                                     <i v-if="child.icon" :class="['text-sm shrink-0', child.icon]" />
                                     <span class="truncate">{{ child.label }}</span>
-                                </button>
+                                </component>
                             </div>
                         </Transition>
                     </div>
 
                     <!-- Item simples sem submenu -->
-                    <div v-else class="group relative mx-2 mb-1">
-                        <button @click="executeAction(item.action)" :class="[
-                            'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer',
-                            isExpanded ? 'gap-4' : 'justify-center',
-                            isActionActive(item.action)
-                                ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        ]">
+                    <div v-else class="mx-2 mb-1">
+                        <component :is="isStringAction(item.action) ? Link : 'button'"
+                            :href="isStringAction(item.action) ? item.action : undefined"
+                            @click="isStringAction(item.action) ? undefined : executeAction(item.action)"
+                            v-tooltip.right="!isExpanded ? { value: item.label, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } } : undefined"
+                            :class="[
+                                'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer',
+                                isExpanded ? 'gap-4' : 'justify-center',
+                                isActionActive(item.action)
+                                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ]">
                             <i :class="['text-lg shrink-0', item.icon]" />
                             <Transition name="fade">
                                 <span v-if="isExpanded" class="font-medium whitespace-nowrap truncate">
                                     {{ item.label }}
                                 </span>
                             </Transition>
-                        </button>
-
-                        <!-- Tooltip ao passar o mouse (quando recolhido) -->
-                        <div v-if="!isExpanded"
-                            class="absolute left-20 top-0 ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                            {{ item.label }}
-                        </div>
+                        </component>
                     </div>
                 </template>
             </nav>
@@ -178,40 +159,32 @@
             <slot name="footer" :isExpanded="isExpanded" :user="user" :userInitials="userInitials"
                 :userFirstName="userFirstName" :logout="logout" :currentTheme="currentTheme" :setTheme="setTheme"
                 :cycleTheme="cycleTheme" :getCurrentThemeIcon="getCurrentThemeIcon"
-                :getCurrentThemeLabel="getCurrentThemeLabel" :toggleUserMenu="toggleUserMenu"
-                :userMenuExpanded="userMenuExpanded" :themeOptions="themeOptions">
-                <div class="border-t border-gray-200 dark:border-gray-700 p-2 space-y-1 overflow-hidden">
+                :getCurrentThemeLabel="getCurrentThemeLabel" :themeOptions="themeOptions">
+                <div class="border-t border-gray-200 dark:border-gray-700 p-2 space-y-1 overflow-y-auto">
                     <!-- User Section -->
                     <div v-if="user" class="w-full overflow-hidden">
-                        <button @click="toggleUserMenu" v-if="isExpanded" :class="[
-                            'w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer',
-                            'hover:bg-gray-100 dark:hover:bg-gray-700'
-                        ]">
+                        <button @click="toggleUserSubmenu"
+                            v-tooltip.right="!isExpanded ? { value: userFirstName, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } } : undefined"
+                            :class="[
+                                'w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer',
+                                'hover:bg-gray-100 dark:hover:bg-gray-700'
+                            ]">
                             <Avatar :label="userInitials" shape="circle"
                                 class="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100 shrink-0" />
-                            <div class="flex-1 min-w-0 text-left overflow-hidden">
+                            <div class="flex-1 min-w-0 text-left overflow-hidden" v-if="isExpanded">
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{
                                     userFirstName
                                 }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
                             </div>
-                            <i :class="[
+                            <i v-if="isExpanded" :class="[
                                 'pi text-xs transition-transform shrink-0',
-                                userMenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'
+                                isUserSubmenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'
                             ]" />
                         </button>
 
-                        <button v-else @click="toggleUserMenu" :class="[
-                            'w-full flex justify-center py-2 rounded-lg transition-colors cursor-pointer',
-                            'hover:bg-gray-100 dark:hover:bg-gray-700'
-                        ]">
-                            <Avatar :label="userInitials" shape="circle"
-                                class="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100" />
-                        </button>
-
-                        <!-- User Menu Items (Submenu) -->
-                        <Transition name="slide" v-if="isExpanded">
-                            <div v-if="userMenuExpanded" class="mt-2 space-y-1 overflow-hidden">
+                        <Transition name="slide">
+                            <div v-if="isUserSubmenuExpanded && isExpanded" class="mt-2 space-y-1 overflow-hidden">
                                 <Link :href="route('profile.edit')" :class="[
                                     'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm',
                                     isActionActive(route('profile.edit'))
@@ -228,28 +201,6 @@
                                 ]">
                                     <i class="pi pi-sign-out text-sm shrink-0" />
                                     <span class="truncate">Sair</span>
-                                </button>
-                            </div>
-                        </Transition>
-
-                        <!-- User Menu Mobile (Collapsed Mode) -->
-                        <Transition name="submenu" v-if="!isExpanded">
-                            <div v-if="userMenuExpanded"
-                                class="fixed bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-1 whitespace-nowrap"
-                                style="z-index: 60; left: calc(1rem + 4rem); bottom: 1rem; transform: translateY(0);">
-                                <Link :href="route('profile.edit')" @click="userMenuExpanded = false" :class="[
-                                    'block px-3 py-2 rounded-md transition-colors text-sm font-medium',
-                                    isActionActive(route('profile.edit'))
-                                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
-                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                ]">
-                                    <i class="pi pi-user text-sm mr-2" />Meu Perfil
-                                </Link>
-                                <button @click="logout" :class="[
-                                    'w-full text-left px-3 py-2 rounded-md transition-colors text-sm font-medium cursor-pointer',
-                                    'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950'
-                                ]">
-                                    <i class="pi pi-sign-out text-sm mr-2" />Sair
                                 </button>
                             </div>
                         </Transition>
@@ -273,7 +224,8 @@
                             </div>
                         </div>
                         <div v-else>
-                            <button @click="cycleTheme" :title="`Tema: ${getCurrentThemeLabel()}`"
+                            <button @click="cycleTheme"
+                                v-tooltip.right="!isExpanded ? { value: `Tema: ${getCurrentThemeLabel()}`, pt: { arrow: { style: { borderRightColor: '#111827' } }, text: '!bg-gray-900 dark:!bg-gray-700 !text-white !font-medium !text-sm !px-3 !py-2' } } : undefined"
                                 class="w-full flex items-center justify-center px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer">
                                 <i :class="['text-lg shrink-0', getCurrentThemeIcon()]" />
                             </button>
@@ -294,7 +246,6 @@ const page = usePage();
 const isExpanded = ref(false); // Inicia fechado em mobile
 const isAttached = ref(false); // Estado para sidebar fixado na lateral
 const expandedMenus = ref([]);
-const userMenuExpanded = ref(false); // Para controlar o submenu do usuário
 const { currentTheme, setTheme, THEMES } = useTheme();
 
 const user = computed(() => page.props.auth?.user);
@@ -322,7 +273,7 @@ const props = defineProps({
 
 // Map de índices para rastrear submenus abertos
 const expandedMenusMap = ref(new Map());
-const activeSubmenuCollapsedIndex = ref(null);
+const USER_MENU_KEY = 'user-menu';
 
 const getMenuKey = (index) => `menu-${index}`;
 const toggleSubmenuByIndex = (index) => {
@@ -330,17 +281,47 @@ const toggleSubmenuByIndex = (index) => {
     const current = expandedMenusMap.value.get(key) || false;
     expandedMenusMap.value.set(key, !current);
 };
-const toggleCollapsedSubmenuByIndex = (index) => {
-    activeSubmenuCollapsedIndex.value = activeSubmenuCollapsedIndex.value === index ? null : index;
+const openCollapsedSubmenu = (index) => {
+    // Abre o submenu e expande a sidebar se necessário
+    expandedMenusMap.value.set(getMenuKey(index), true);
+
+    // Expande a sidebar para mostrar submenu interno
+    isExpanded.value = true;
+
+    // Persiste estado no desktop
+    if (window.innerWidth >= 1024) {
+        localStorage.setItem(STORAGE_KEY, 'true');
+    }
 };
 const isSubmenuExpanded = (index) => {
     return expandedMenusMap.value.get(getMenuKey(index)) || false;
 };
 
+const isUserSubmenuExpanded = computed(() => expandedMenusMap.value.get(USER_MENU_KEY) || false);
+
+const toggleUserSubmenu = () => {
+    const next = !expandedMenusMap.value.get(USER_MENU_KEY);
+
+    if (next) {
+        expandedMenusMap.value.set(USER_MENU_KEY, true);
+        // Se estiver recolhido, expande para mostrar submenu inline
+        if (!isExpanded.value) {
+            isExpanded.value = true;
+            if (window.innerWidth >= 1024) {
+                localStorage.setItem(STORAGE_KEY, 'true');
+            }
+        }
+    } else {
+        expandedMenusMap.value.delete(USER_MENU_KEY);
+    }
+};
+
+const isStringAction = (action) => typeof action === 'string';
+
 const executeAction = (action) => {
     if (typeof action === 'function') {
         action();
-    } else if (typeof action === 'string') {
+    } else if (isStringAction(action)) {
         // Se for uma string, assume que é uma rota e navega
         router.visit(action);
     }
@@ -401,9 +382,7 @@ onMounted(() => {
 // Fecha menu ao navegar em mobile e fecha submenus
 watch(() => page.url, () => {
     // Fecha submenus ao navegar
-    activeSubmenuCollapsedIndex.value = null;
     expandedMenusMap.value.clear();
-    userMenuExpanded.value = false;
 
     // Fecha menu mobile se em mobile
     if (window.innerWidth < 1024) {
@@ -449,34 +428,17 @@ const themeOptions = [
 const toggleSidebar = () => {
     isExpanded.value = !isExpanded.value;
 
-    // Fecha submenu flutuante ao expandir
+    // Ao expandir, mantém exclusividade e limpa submenus recolhidos
     if (isExpanded.value) {
-        activeSubmenuCollapsedIndex.value = null;
-        userMenuExpanded.value = false; // Fecha menu do usuário ao expandir sidebar
-    } else {
-        // Retraia submenus ao retrair o menu
         expandedMenusMap.value.clear();
-        activeSubmenuCollapsedIndex.value = null; // Fecha submenu flutuante ao retrair
-        userMenuExpanded.value = false; // Fecha menu do usuário ao retrair
+    } else {
+        // Ao retrair, limpa estados de submenu
+        expandedMenusMap.value.clear();
     }
 
     // Salva estado apenas no desktop
     if (window.innerWidth >= 1024) {
         localStorage.setItem(STORAGE_KEY, isExpanded.value.toString());
-    }
-};
-
-const toggleUserMenu = () => {
-    userMenuExpanded.value = !userMenuExpanded.value;
-};
-
-const closeSubmenuAndMenu = () => {
-    // Fecha o submenu flutuante
-    activeSubmenuCollapsedIndex.value = null;
-
-    // Fecha o menu mobile se em mobile
-    if (window.innerWidth < 1024) {
-        isExpanded.value = false;
     }
 };
 

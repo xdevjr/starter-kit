@@ -8,21 +8,7 @@ import { ZiggyVue } from "ziggy-js";
 import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
-
-// Função para carregar as traduções
-const loadLocale = async (locale) => {
-    if (locale === "en") {
-        return {};
-    }
-
-    try {
-        const localeModule = await import(`./locale/${locale}.json`);
-        return localeModule.default;
-    } catch (error) {
-        console.warn(`Locale ${locale} not found`);
-        return {};
-    }
-};
+import ToastManager from "./Components/ToastManager.vue";
 
 createInertiaApp({
     resolve: async (name) => {
@@ -44,7 +30,9 @@ createInertiaApp({
         const locale = import.meta.env.VITE_APP_LOCALE || "en";
         const translations = await loadLocale(locale);
 
-        const app = createApp({ render: () => h(App, props) })
+        const app = createApp({
+            render: () => h("div", [h(ToastManager), h(App, props)]),
+        })
             .use(plugin)
             .use(ZiggyVue)
             .use(PrimeVue, {
