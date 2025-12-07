@@ -120,4 +120,25 @@ class AuthController extends Controller
             5000
         );
     }
+
+    public function destroy(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        Auth::logout();
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/')->withToast(
+            'info',
+            'Conta deletada',
+            'Sua conta foi removida com sucesso.'
+        );
+    }
 }

@@ -14,15 +14,21 @@
             <div class="max-w-5xl mx-auto text-center">
                 <div class="flex justify-center mb-6">
                     <Link :href="route('home')">
-                    <Logo :width="100" :height="100" variant="default"
-                        class="hover:opacity-80 transition-opacity cursor-pointer" />
+                        <Logo :width="100" :height="100" variant="default"
+                            class="hover:opacity-80 transition-opacity cursor-pointer" />
                     </Link>
                 </div>
                 <h1 class="text-4xl md:text-5xl font-bold mb-4 text-gray-900 dark:text-white">
                     Starter Kit Laravel
                 </h1>
-                <p class="text-lg md:text-xl mb-8 text-gray-700 dark:text-gray-300">
-                    Sistema de autenticação completo com Laravel, Vue 3, Inertia.js, PrimeVue e Tailwind CSS
+                <p class="text-lg md:text-xl mb-10 text-gray-700 dark:text-gray-300 leading-relaxed">
+                    Sistema de autenticação completo com
+                    <span class="text-red-600 font-semibold"> Laravel</span>,
+                    <span class="text-emerald-600 font-semibold"> Vue 3</span>,
+                    <span class="text-purple-600 font-semibold"> Inertia.js</span>,
+                    <span class="text-sky-600 font-semibold"> PrimeVue</span>,
+                    <span class="text-cyan-600 font-semibold"> Tailwind CSS</span>
+                    e <span class="text-amber-600 font-semibold"> Vite</span>.
                 </p>
 
                 <!-- Features -->
@@ -52,8 +58,8 @@
                 <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
                     <template v-if="isAuthenticated">
                         <Link :href="route('dashboard')" class="inline-flex">
-                        <Button label="Ir para o Dashboard" icon="pi pi-chart-bar" size="large"
-                            class="bg-emerald-600 hover:bg-emerald-700" />
+                            <Button label="Ir para o Dashboard" icon="pi pi-chart-bar" size="large"
+                                class="bg-emerald-600 hover:bg-emerald-700" />
                         </Link>
                     </template>
                     <template v-else>

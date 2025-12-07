@@ -9,14 +9,13 @@
             <div class="container mx-auto px-4 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <Link :href="route('home')">
-                    <Logo :width="40" :height="40" variant="default"
-                        class="hover:opacity-80 transition-opacity cursor-pointer" />
+                        <Logo :width="40" :height="40" variant="default"
+                            class="hover:opacity-80 transition-opacity cursor-pointer" />
                     </Link>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
                 </div>
                 <div class="flex items-center gap-4">
-                    <ThemeSelector />
-                    <Button label="Sair" icon="pi pi-sign-out" severity="danger" @click="logout" />
+                    <UserMenu />
                 </div>
             </div>
         </header>
@@ -24,6 +23,17 @@
         <!-- Main Content -->
         <main class="container mx-auto px-4 py-8">
             <div class="max-w-4xl mx-auto">
+                <!-- Theme Selector Card -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Aparência</p>
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Tema da interface</h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">Alterne rapidamente entre claro e escuro.
+                        </p>
+                    </div>
+                    <ThemeSelector />
+                </div>
+
                 <!-- Welcome Card -->
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 mb-8">
                     <h2 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Bem-vindo ao Starter Kit! 🎉</h2>
@@ -69,12 +79,8 @@
 </template>
 
 <script setup>
-import { Head, router, Link } from '@inertiajs/vue3';
-import Button from 'primevue/button';
+import { Head, Link } from '@inertiajs/vue3';
 import ThemeSelector from '@/Components/ThemeSelector.vue';
 import Logo from '@/Components/Logo.vue';
-
-function logout() {
-    router.post(route('logout'));
-}
+import UserMenu from '@/Components/UserMenu.vue';
 </script>

@@ -28,5 +28,8 @@ Route::controller(AuthController::class)
                 return inertia('ResetPassword');
             })->name('reset-password');
         });
-        Route::post('/logout', 'logout')->middleware('auth', 'verified')->name('logout');
+        Route::middleware(['auth', 'verified'])->group(function () {
+            Route::post('/logout', 'logout')->name('logout');
+            Route::delete('/profile', 'destroy')->name('profile.destroy');
+        });
     });
