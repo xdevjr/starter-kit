@@ -93,23 +93,469 @@ return back()->withToast('warn', 'Atenção', 'Revise os campos opcionais.', 500
 
 As props são enviadas ao frontend via Inertia e consumidas pelo `ToastManager`, exibindo o toast globalmente.
 
-## 🧩 Sidebar Component
+## 🧩 usePagination Composable
 
-Menu lateral flutuante/responsivo independente do layout, com controle de posição e anexação internos.
+Composable completo para paginação, filtros e ordenação múltipla com sincronização automática via localStorage.
 
-**Principais pontos**
-- Wrapper próprio com slot `#content` que envolve a página.
-- Posição esquerda/direita com persistência (`sidebar-position`).
-- Anexar/Desanexar com persistência (`sidebar-attached`).
-- Estado expandido/retraído salvo (`sidebar-expanded`).
-- Overlay mobile/tablet clicável para fechar; não bloqueia desktop.
-- Tooltips reativos para itens retraídos; submenus e menu do usuário inline quando expandido.
-- Seletor de tema claro/escuro/sistema integrado.
+### Características principais
 
-**Uso básico**
+- ✅ **Paginação com DataTable ou componentes customizados**
+- ✅ **Filtros reativos com debounce automático**
+- ✅ **Ordenação múltipla (até 3 campos)**
+- ✅ **Persistência de estado no localStorage**
+- ✅ **Sincronização automática com PrimeVue DataTable**
+- ✅ **Rows globais compartilhados entre tabelas**
+- ✅ **Limpeza automática do localStorage quando retorna ao estado inicial**
+
+### Uso com DataTable (PrimeVue)
+
 ```vue
 <template>
-  <Sidebar :items="sidebarItems">
+  <div>
+    <!-- Filtros -->
+    <div class="mb-4 flex gap-3">
+      <InputText 
+        v-model="filters.name" 
+        @input="applyFilters" 
+        placeholder="Filtrar por nome..."
+        class="flex-1" 
+      />
+      <InputText 
+        v-model="filters.email" 
+        @input="applyFilters" 
+        placeholder="Filtrar por email..."
+        class="flex-1" 
+      />
+      <Button label="Limpar Filtros" @click="clearFilters" severity="secondary" />
+    </div>
+
+    <!-- DataTable com ordenação múltipla -->
+    <DataTable
+      :value="data"
+      :loading="loading"
+      :paginator="true"
+      :rows="rows"
+      :totalRecords="total"
+      :first="(page - 1) * rows"
+      :multiSortMeta="dataTable.multiSortMeta"
+      :rowsPerPageOptions="[5, 10, 25, 50]"
+      sortMode="multiple"
+      removableSort
+      lazy
+      @page="dataTable.handlePageChange"
+      @sort="dataTable.handleSortChange"
+    >
+      <Column field="id" header="ID" sortable />
+      <Column field="name" header="Nome" sortable />
+      <Column field="email" header="Email" sortable />
+    </DataTable>
+  </div>
+</template>
+
+<script setup>
+import { InputText, Button, DataTable, Column } from 'primevue'
+import usePagination from '@/Composables/usePagination'
+
+const {
+  data,
+  loading,
+  total,
+  page,
+  rows,
+  filters,
+  clearFilters,
+  applyFilters,
+  dataTable,
+} = usePagination({
+  endpoint: '/api/users',
+  storageKey: 'users-table-pagination',
+  initialFilters: { name: '', email: '' },
+  initialSort: null,
+  initialPage: 1,
+  initialRows: 'global',
+  autoFetch: true,
+})
+</script>
+```
+
+### Uso com Componentes Customizados (Paginator + Cards)
+
+Exemplo prático com o componente `UsersList.vue` (lista de cartões com paginação interativa):
+
+```vue
+<template>
+  <div>
+    <!-- Filtros -->
+    <div class="mb-6 flex gap-3">
+      <InputText 
+        v-model="filters.name" 
+        @input="applyFilters" 
+        placeholder="Filtrar por nome..."
+        class="flex-1" 
+      />
+      <InputText 
+        v-model="filters.email" 
+        @input="applyFilters" 
+        placeholder="Filtrar por email..."
+        class="flex-1" 
+      />
+      <Button label="Limpar Filtros" @click="clearFilters" severity="secondary" />
+    </div>
+
+    <!-- Ordenação Múltipla com Ícones Interativos -->
+    <div class="mb-6">
+      <label class="block text-sm font-semibold mb-3">Ordenação</label>
+      <div class="flex gap-3 flex-wrap">
+        <div 
+          v-for="field in sortFields" 
+          :key="field.value"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all"
+          :class="[
+            sort.find(s => s.field === field.value)?.direction === 'asc'
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+              : sort.find(s => s.field === field.value)?.direction === 'desc'
+              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+              : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+          ]"
+        >
+          <span class="text-sm font-medium">{{ field.label }}</span>
+          <Button 
+            :icon="getSortIcon(field.value)" 
+            @click="toggleSort(field.value)" 
+            text rounded size="small"
+            :severity="getSortSeverity(field.value)"
+            :title="getSortTitle(field.value)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards Grid -->
+    <div v-if="data.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <Card 
+        v-for="user in data" 
+        :key="user.id"
+        class="hover:shadow-xl transition-all duration-300"
+      >
+        <template #header>
+          <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 flex items-center gap-4">
+            <Avatar 
+              :label="user.name.charAt(0).toUpperCase()" 
+              size="xlarge" 
+              shape="circle"
+              class="bg-white text-blue-600"
+              style="width: 4rem; height: 4rem;"
+            />
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-white">{{ user.name }}</h3>
+              <span class="text-sm text-white/90">ID: {{ user.id }}</span>
+            </div>
+          </div>
+        </template>
+        <template #content>
+          <div class="flex items-center text-gray-700 dark:text-gray-300">
+            <i class="pi pi-envelope mr-3 text-blue-500"></i>
+            <span class="text-sm">{{ user.email }}</span>
+          </div>
+        </template>
+        <template #footer>
+          <div class="flex gap-2">
+            <Button label="Detalhes" icon="pi pi-eye" class="flex-1" />
+            <Button label="Editar" icon="pi pi-pencil" severity="secondary" class="flex-1" outlined />
+          </div>
+        </template>
+      </Card>
+    </div>
+
+    <!-- Paginador PrimeVue -->
+    <div v-if="total > 0" class="mt-6">
+      <Paginator 
+        :rows="rows" 
+        :totalRecords="total" 
+        :first="(page - 1) * rows"
+        :rowsPerPageOptions="[5, 10, 25, 50]" 
+        @page="dataTable.handlePageChange"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { InputText, Button, Card, Avatar, Paginator } from 'primevue'
+import usePagination from '@/Composables/usePagination'
+
+const {
+  data,
+  loading,
+  total,
+  page,
+  rows,
+  filters,
+  sort,
+  clearFilters,
+  applyFilters,
+  dataTable,
+} = usePagination({
+  endpoint: route('users.list'),
+  storageKey: 'users-list-pagination',
+  initialFilters: { name: '', email: '' },
+  initialSort: null,
+  initialPage: 1,
+  initialRows: 'global',
+  autoFetch: true,
+})
+
+const sortFields = [
+  { label: 'ID', value: 'id' },
+  { label: 'Nome', value: 'name' },
+  { label: 'Email', value: 'email' }
+]
+
+// Obtém o estado atual de um campo
+const getSortState = (field) => {
+  return sort.value.find(s => s.field === field)?.direction || null
+}
+
+// Obtém o ícone baseado no estado
+const getSortIcon = (field) => {
+  const state = getSortState(field)
+  if (state === 'asc') return 'pi pi-sort-amount-up-alt'
+  if (state === 'desc') return 'pi pi-sort-amount-down'
+  return 'pi pi-sort-alt'
+}
+
+// Obtém a severidade baseada no estado
+const getSortSeverity = (field) => {
+  const state = getSortState(field)
+  if (state === 'asc') return 'info'
+  if (state === 'desc') return 'help'
+  return 'secondary'
+}
+
+// Obtém o título do tooltip baseado no estado
+const getSortTitle = (field) => {
+  const state = getSortState(field)
+  if (state === 'asc') return 'Crescente - Clique para Decrescente'
+  if (state === 'desc') return 'Decrescente - Clique para Desabilitar'
+  return 'Desabilitado - Clique para Crescente'
+}
+
+// Alterna entre os 3 estados: desabilitado -> asc -> desc -> desabilitado
+const toggleSort = (field) => {
+  const currentState = getSortState(field)
+  
+  if (currentState === null) {
+    sort.value = [...sort.value, { field, direction: 'asc' }]
+  } else if (currentState === 'asc') {
+    sort.value = sort.value.map(s => s.field === field ? { ...s, direction: 'desc' } : s)
+  } else {
+    sort.value = sort.value.filter(s => s.field !== field)
+  }
+}
+</script>
+```
+
+### API do Composable
+
+**Parametros de inicialização:**
+```javascript
+{
+  endpoint,              // string - URL da API (obrigatório)
+  storageKey,           // string - chave localStorage para persistência (obrigatório)
+  initialFilters,       // object - filtros iniciais, default: {}
+  initialSort,          // array|null - [{field: 'id', direction: 'asc'}], default: null
+  initialPage,          // number - página inicial, default: 1
+  initialRows,          // number|'global' - itens por página, 'global' compartilha entre tabelas, default: 10
+  autoFetch,            // boolean - buscar dados automaticamente ao mudar page/rows/sort, default: true
+  pageName,             // string - nome do parâmetro de página, default: 'page'
+}
+```
+
+**Propriedades retornadas:**
+```javascript
+{
+  // Estado
+  loading,              // ref<boolean> - carregando
+  data,                 // ref<array> - dados da página
+  total,                // ref<number> - total de registros
+  page,                 // ref<number> - página atual
+  rows,                 // ref<number> - itens por página
+  filters,              // reactive<object> - filtros ativos
+  sort,                 // ref<array> - ordenações ativas [{field, direction}]
+  
+  // Métodos
+  fetch,                // () => Promise - buscar dados manualmente
+  setPage,              // (p: number) => void
+  setRows,              // (r: number) => void
+  setSort,              // (s: array|string|null) => void
+  setFilters,           // (f: object) => void
+  clearFilters,         // () => array - limpa filtros/sort e retorna multiSortMeta
+  applyFilters,         // (debounceMs?: number) => void - buscar com debounce
+  
+  // Helpers DataTable
+  multiSortMeta,        // ref<array> - formato PrimeVue
+  dataTable: {
+    handlePageChange,   // (event) => void - sincroniza page e rows
+    handleSortChange,   // (event) => void - sincroniza sort e multiSortMeta
+    multiSortMeta,      // ref<array> - referência
+  }
+}
+```
+
+### Formato de Persistência no localStorage
+
+```json
+{
+  "filters": {
+    "name": "john",
+    "email": ""
+  },
+  "sort": [
+    { "field": "name", "direction": "asc" },
+    { "field": "id", "direction": "desc" }
+  ],
+  "rows": 25
+}
+```
+
+### Backend - Processamento de Filtros e Sort
+
+```php
+Route::get('/api/users', function (\Illuminate\Http\Request $request) {
+    $query = User::query();
+
+    // Filtros: filters[name]=john&filters[email]=test@example.com
+    $filters = $request->input('filters', []);
+    if (is_array($filters)) {
+        foreach ($filters as $key => $value) {
+            if ($value && in_array($key, ['name', 'email'])) {
+                $query->where($key, 'like', '%' . $value . '%');
+            }
+        }
+    }
+
+    // Sort: sort[]=id,asc&sort[]=name,desc (múltiplo)
+    $sort = $request->input('sort', []);
+    if (is_array($sort)) {
+        foreach ($sort as $sortItem) {
+            if ($sortItem) {
+                [$field, $direction] = explode(',', $sortItem) + [null, 'asc'];
+                if ($field && in_array($field, ['id', 'name', 'email'])) {
+                    $query->orderBy($field, $direction);
+                }
+            }
+        }
+    }
+
+    // Paginação
+    $perPage = (int) $request->input('per_page', 10);
+    $users = $query->paginate($perPage);
+
+    return response()->json([
+        'data' => $users->items(),
+        'total' => $users->total(),
+        'current_page' => $users->currentPage(),
+        'per_page' => $users->perPage(),
+    ]);
+});
+```
+
+**Exemplo de URL gerada:**
+```
+GET /api/users?page=1&per_page=10&filters[name]=john&sort[]=id,asc&sort[]=name,desc
+```
+
+### Exemplo de Controller (UserController.php)
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+
+class UserController extends Controller
+{
+    public function index()
+    {
+        return inertia('UsersTable');
+    }
+
+    public function list(Request $request)
+    {
+        $query = User::query();
+
+        // Processar filtros
+        $filters = $request->input('filters', []);
+        if (is_array($filters)) {
+            foreach ($filters as $key => $value) {
+                if ($value && in_array($key, ['name', 'email'])) {
+                    $query->where($key, 'like', '%' . $value . '%');
+                }
+            }
+        }
+
+        // Processar ordenação múltipla
+        $sort = $request->input('sort', []);
+        if (is_array($sort)) {
+            foreach ($sort as $sortItem) {
+                if ($sortItem) {
+                    [$field, $direction] = explode(',', $sortItem) + [null, 'asc'];
+                    if ($field && in_array($field, ['id', 'name', 'email', 'created_at'])) {
+                        $query->orderBy($field, $direction);
+                    }
+                }
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $users = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $users->items(),
+            'total' => $users->total(),
+            'current_page' => $users->currentPage(),
+            'per_page' => $users->perPage(),
+        ]);
+    }
+}
+```
+
+### Observações Importantes
+
+- ✅ Filtros usam `v-model="filters.field"` diretamente (sem refs adicionais)
+- ✅ `filters` é um objeto reativo gerenciado pelo composable
+- ✅ `sort` é um array de objetos `{field, direction}` sincronizado com localStorage
+- ✅ Debounce de 500ms padrão previne requisições excessivas
+- ✅ `clearFilters()` reseta filtros, sort e página 1
+- ✅ `multiSortMeta` é sincronizado automaticamente com PrimeVue DataTable
+- ✅ localStorage é limpado automaticamente quando volta ao estado inicial
+- ✅ `initialRows: 'global'` compartilha preferências entre múltiplas tabelas
+
+## 🧩 Sidebar Component
+
+Menu lateral flutuante/responsivo independente do layout, com controle de posição, anexação e persistência de estado.
+
+### Características principais
+
+- ✅ **Menu lateral flutuante (desktop) ou drawer fullscreen (mobile/tablet)**
+- ✅ **Posição configurável: esquerda ou direita**
+- ✅ **Modo anexado (sticky) ou flutuante**
+- ✅ **Persistência unificada de estado em localStorage (chave única: `sidebar`)**
+- ✅ **Expansão/Retração com transições suaves**
+- ✅ **Overlay mobile clicável para fechar**
+- ✅ **Tooltips para itens retraídos**
+- ✅ **Submenus com chevrons e indicadores de expansão**
+- ✅ **Menu do usuário integrado (perfil, logout)**
+- ✅ **Seletor de tema claro/escuro/sistema**
+- ✅ **Limpeza automática do localStorage quando retorna ao estado inicial**
+
+### Uso básico
+
+```vue
+<template>
+  <Sidebar :items="sidebarItems" :initialState="customState">
     <template #content>
       <main class="flex-1 overflow-y-auto p-6">
         <slot />
@@ -119,37 +565,106 @@ Menu lateral flutuante/responsivo independente do layout, com controle de posiç
 </template>
 
 <script setup>
-import Sidebar from '@/Components/Sidebar.vue';
+import Sidebar from '@/Components/Sidebar.vue'
 
 const sidebarItems = [
   { label: 'Home', action: route('home'), icon: 'pi pi-home' },
   { label: 'Dashboard', action: route('dashboard'), icon: 'pi pi-chart-bar' },
   {
-    label: 'Projetos',
-    icon: 'pi pi-folder',
+    label: 'Usuários',
+    icon: 'pi pi-users',
     submenu: [
-      { label: 'Meus Projetos', action: '#', icon: 'pi pi-briefcase' },
-      { label: 'Arquivos', action: '#', icon: 'pi pi-file' }
+      { label: 'Tabela', action: route('users.index'), icon: 'pi pi-table' },
+      { label: 'Lista de Cartões', action: route('users-list.index'), icon: 'pi pi-th-large' }
+    ]
+  },
+  {
+    label: 'Configurações',
+    icon: 'pi pi-cog',
+    submenu: [
+      { label: 'Perfil', action: '#', icon: 'pi pi-user' },
+      { label: 'Segurança', action: '#', icon: 'pi pi-shield' }
     ]
   }
-];
+]
+
+const customState = {
+  expanded: true,      // Sidebar inicialmente expandida (desktop)
+  attached: false,     // Sidebar flutuante por padrão
+  position: 'left'     // Posição: 'left' ou 'right'
+}
 </script>
 ```
 
-> Em páginas autenticadas, o `AppLayout` já embute essa estrutura; basta usar o `slot` do layout para o conteúdo.
+### Props
 
-**Props**
-- `items` (obrigatório): `{ label, action?: string|function, icon, submenu?: Item[] }`
+- **`items`** (obrigatório): Array de itens do menu
+  ```javascript
+  [
+    {
+      label: 'Item Label',        // Texto exibido
+      action?: string|function,   // URL (route()) ou função callback
+      icon?: string,              // Classe de ícone PrimeIcons
+      submenu?: Item[]            // Subitens para dropdown
+    }
+  ]
+  ```
 
-**Slots**
-- `#header`: `{ isExpanded, toggleSidebar }`
-- `#footer`: `{ user, logout, currentTheme, setTheme, cycleTheme }`
-- `#content`: conteúdo principal
+- **`initialState`** (opcional): Customiza o estado inicial
+  ```javascript
+  {
+    expanded: true,      // Expandido inicialmente
+    attached: false,     // Flutuante (false) ou anexado/sticky (true)
+    position: 'left'     // 'left' ou 'right'
+  }
+  ```
 
-**Comportamento por breakpoint**
-- `<768px`: drawer fullscreen com overlay clicável
-- `768-1023`: drawer overlay mais largo
-- `>=1024`: flutuante ou anexado, posição esquerda/direita
+### Formato de Persistência no localStorage
+
+Todos os estados são salvos em uma única chave `sidebar`:
+
+```json
+{
+  "expanded": true,
+  "attached": false,
+  "position": "left"
+}
+```
+
+- O estado é **automaticamente removido** do localStorage se retornar aos valores iniciais
+- Desktop: estado é persistido entre sessões
+- Mobile: sempre inicia colapsado, mas respira posição e anexação
+
+### Slots
+
+- **`#header`**: `{ isExpanded, toggleSidebar }` — Personalize o cabeçalho
+- **`#footer`**: `{ user, logout, currentTheme, setTheme, cycleTheme, getCurrentThemeIcon, getCurrentThemeLabel }` — Menu do usuário e temas
+- **`#content`** (obrigatório): Conteúdo principal da página
+
+### Comportamento por Breakpoint
+
+- **`<768px`**: Drawer fullscreen com overlay clicável, botão hamburguer fixo
+- **`768-1023px`**: Drawer overlay com dimensões ajustadas
+- **`>=1024px`**: Flutuante/anexado conforme estado, com ícones de controle visíveis
+
+### Exemplo com AppLayout
+
+Em páginas autenticadas, use o `AppLayout` que já embute a estrutura Sidebar:
+
+```vue
+<script setup>
+import AppLayout from '@/Layouts/AppLayout.vue'
+
+defineOptions({ layout: AppLayout })
+</script>
+
+<template>
+  <div>
+    <h1>Seu conteúdo aqui</h1>
+    <!-- O AppLayout cuida de Sidebar, Header e estrutura geral -->
+  </div>
+</template>
+```
 
 ## 🧪 Testes
 
@@ -188,339 +703,3 @@ const sidebarItems = [
 ## 📄 Licença
 
 MIT License
-
-## 🔥 O que vem pronto
-
-- **Laravel 12** + **PHP 8.2+** com SQLite por padrão (fácil trocar)
-- **Autenticação completa** (login, registro, reset de senha) e página de perfil
-- **UI**: Vue 3 + Inertia + PrimeVue 4 + Tailwind CSS 4 + PrimeIcons
-- **Build**: Vite, auto-import de componentes Vue
-- **Qualidade**: Pest para testes, Laravel Pint para estilo
-- **Produtividade**: Macro `withToast` para toasts globais, Laravel Boost, scripts Composer (setup/dev/test)
-- **Docker**: Laravel Sail opcional
-
-## 📋 Requisitos
-
-- PHP >= 8.2
-- Composer
-- Node.js >= 18 (npm ou yarn)
-
-## 🚀 Como iniciar
-
-### Instalação rápida (recomendada)
-
-```bash
-git clone <seu-repositorio>
-cd starter-kit
-composer setup
-```
-
-`composer setup` faz tudo: instala PHP deps, cria `.env` (se preciso), gera APP_KEY, roda migrations, instala deps JS e builda assets.
-
-### Instalação manual
-
-```bash
-# Backend
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-
-# Frontend
-npm install
-npm run build
-```
-
-## 🧭 Fluxo de desenvolvimento
-
-- Tudo junto (recomendado): `composer dev` 
-    - Sobe Laravel em `http://localhost:8000`, queue worker e Vite com hot reload
-- Serviços separados:
-    ```bash
-    php artisan serve
-    npm run dev
-    php artisan queue:listen
-    ```
-
-### Build de produção
-
-```bash
-npm run build
-```
-
-### Testes
-
-```bash
-composer test
-# ou
-php artisan test
-```
-
-## 👤 Experiência da conta
-
-- Menu do usuário (Dashboard) mostra o primeiro nome e acessa perfil/logout.
-- Página de perfil (`/profile`) com formulários para nome/email e troca de senha.
-- Exclusão de conta: seção de perigo abre modal com avisos; exige senha atual antes de deletar e desconectar.
-- Seletor de tema dentro das páginas (card na Dashboard, bloco lateral no Perfil) para alternar claro/escuro.
-- Macro `withToast` em `AppServiceProvider` para respostas de redirect exibirem toasts globais (via sessão).
-
-## 🏗️ Estrutura
-
-```
-app/                 # Controllers, Models, Providers
-resources/
-    js/
-        Components/      # Componentes Vue (UserMenu, ThemeSelector, etc.)
-        Pages/           # Páginas Inertia (Home, Dashboard, Profile...)
-        app.js           # Bootstrap + PrimeVue + Inertia
-    css/app.css        # Estilos globais
-    views/app.blade.php# Template raiz Inertia
-routes/web.php       # Rotas web
-database/            # Migrations, factories, seeders
-tests/               # Testes Pest
-lang/                # Traduções (pt-BR incluso)
-```
-
-## 🌐 Idioma
-
-- Já vem com pt-BR (pacote `lucascudo/laravel-pt-br-localization`).
-- Ajuste no `.env` se quiser trocar:
-
-```env
-APP_LOCALE=pt_BR
-APP_FALLBACK_LOCALE=pt_BR
-```
-
-## 🎨 UI e temas
-
-- PrimeVue com auto-import: use componentes sem import manual.
-
-```vue
-<template>
-        <Button label="Clique aqui" />
-        <DataTable :value="produtos" />
-</template>
-```
-
-- Tema PrimeVue configurado em `resources/js/app.js` (Aura). Ajuste lá conforme sua identidade visual.
-
-## 🧭 Sidebar Flutuante
-
-O componente `Sidebar.vue` oferece um menu lateral moderno, flutuante e responsivo com as seguintes funcionalidades:
-
-### ✨ Características
-
-- **Expand/Collapse**: Toggle entre modo expandido (w-64) e retraído (w-16)
-- **Menu Flutuante**: Não afeta o layout do conteúdo, posiciona-se lado a lado
-- **Responsivo**: Hamburger mobile com slide-in da esquerda em telas pequenas
-- **Submenus**: Em modo expandido, submenus aparecem internamente; em modo retraído, submenus flutuam ao lado
-- **Menu do Usuário**: Integrado com submenu para Perfil e Logout
-- **Seletor de Tema**: 3 opções (Claro, Escuro, Sistema) com persistência em localStorage
-- **Auto-close**: Menus fecham automaticamente ao navegar ou clicar fora
-- **Dark Mode**: Suporte completo com Tailwind CSS
-
-### 📝 Uso
-
-```vue
-<template>
-  <Sidebar>
-    <!-- Conteúdo principal aqui -->
-  </Sidebar>
-</template>
-```
-
-### 🎯 Customização com Slots
-
-O Sidebar oferece dois slots nomeados para customização:
-
-#### Header Slot
-
-```vue
-<template>
-  <Sidebar>
-    <template #header="{ isExpanded, toggleSidebar }">
-      <div class="custom-header">
-        <h1 v-if="isExpanded">Meu App</h1>
-        <button @click="toggleSidebar">Toggle</button>
-      </div>
-    </template>
-  </Sidebar>
-</template>
-```
-
-#### Footer Slot
-
-```vue
-<template>
-  <Sidebar>
-    <template #footer="{ user, logout, currentTheme, setTheme, cycleTheme }">
-      <div class="custom-footer">
-        <p>Olá, {{ user.name }}</p>
-        <button @click="logout">Sair</button>
-        <button @click="cycleTheme">Tema Atual: {{ currentTheme }}</button>
-      </div>
-    </template>
-  </Sidebar>
-</template>
-```
-
-**Props disponíveis no footer slot:**
-- `isExpanded` - Se o sidebar está expandido
-- `user` - Objeto do usuário autenticado
-- `userInitials` - Iniciais do nome do usuário
-- `logout` - Função para logout
-- `currentTheme` - Tema atual (light/dark/system)
-- `setTheme(valor)` - Define um tema específico
-- `cycleTheme()` - Alterna entre temas
-- `getCurrentThemeIcon()` - Ícone do tema atual
-- `getCurrentThemeLabel()` - Label do tema atual
-- `toggleUserMenu()` - Toggle do menu do usuário
-- `userMenuExpanded` - Se o menu de usuário está aberto
-- `isActive(rota)` - Verifica se rota está ativa
-- `themeOptions` - Array com opções de tema
-
-### 🔧 Estrutura Interna
-
-- Menu items são definidos no script `setup`
-- Submenus automáticos para itens com `children`
-- Persistência de estado expandido em localStorage (chave: `sidebar-expanded`)
-- Navegação detectada via `useRouter()` para fechar submenus automaticamente
-
-## 🧪 Testes
-
-- Pest como padrão; exemplos em `tests/Feature` e `tests/Unit`.
-
-```bash
-composer test          # todos os testes
-php artisan test --filter=ExampleTest
-```
-
-## 🐳 Docker (Sail)
-
-```bash
-./vendor/bin/sail up -d          # sobe containers
-./vendor/bin/sail artisan migrate
-./vendor/bin/sail npm run dev
-./vendor/bin/sail test
-```
-
-## 📦 Scripts úteis
-
-- `composer setup` — setup completo
-- `composer dev`   — ambiente dev completo (Laravel + Vite + queue)
-- `composer test`  — roda a suíte de testes
-
-## 📚 Documentação de Componentes
-
-### Sidebar Component
-
-Menu lateral flutuante/responsivo com controle completo dentro do próprio componente (não depende mais do `AppLayout`).
-
-#### 🎯 Novidades e características
-
-- **Wrapper próprio**: envolve o conteúdo com slot `#content` e controla layout/scroll.
-- **Posição esquerda/direita**: toggle interno, persiste em `localStorage` (`sidebar-position`).
-- **Anexar/Desanexar**: alterna entre flutuante e fixo, persiste em `localStorage` (`sidebar-attached`).
-- **Persistência de expansão**: estado expandido/retraído salvo em `localStorage` (`sidebar-expanded`).
-- **Overlay mobile/tablet**: clicável para fechar; não bloqueia desktop.
-- **Tooltips reativos**: lado do tooltip acompanha a posição da sidebar.
-- **Submenus e menu do usuário**: inline quando expandido; tooltips quando retraído.
-- **Seletor de tema**: claro/escuro/sistema com ícones e persistência.
-
-#### 📖 Como usar
-
-```vue
-<template>
-  <Sidebar :items="sidebarItems">
-    <template #content>
-      <main class="flex-1 overflow-y-auto p-6">
-        <slot />
-      </main>
-    </template>
-  </Sidebar>
-</template>
-
-<script setup>
-import Sidebar from '@/Components/Sidebar.vue';
-
-const sidebarItems = [
-  { label: 'Home', action: route('home'), icon: 'pi pi-home' },
-  { label: 'Dashboard', action: route('dashboard'), icon: 'pi pi-chart-bar' },
-  {
-    label: 'Projetos',
-    icon: 'pi pi-folder',
-    submenu: [
-      { label: 'Meus Projetos', action: '#', icon: 'pi pi-briefcase' },
-      { label: 'Arquivos', action: '#', icon: 'pi pi-file' }
-    ]
-  }
-];
-</script>
-```
-
-> Dica: o `AppLayout` já usa essa estrutura; em páginas autenticadas é só colocar o conteúdo no `slot` do layout.
-
-#### 📦 Props
-
-- `items` (obrigatório): array de itens `{ label, action?: string|function, icon, submenu?: Item[] }`.
-
-#### 🎨 Modos e comportamento
-
-- **Flutuante** (padrão): não ocupa o fluxo; posição pode ser esquerda/direita.
-- **Anexado**: entra no fluxo com `flex-row`/`flex-row-reverse` conforme posição.
-- **Mobile/Tablet**: drawer fullscreen com overlay clicável para fechar.
-- **Desktop**: interação normal, overlay não bloqueia conteúdo.
-
-#### 🧩 Slots úteis
-
-- `#header`: customizar topo; recebe `{ isExpanded, toggleSidebar }`.
-- `#footer`: customizar rodapé; recebe `{ user, logout, currentTheme, setTheme, cycleTheme }`.
-- `#content`: conteúdo principal (envolto pelo wrapper da sidebar).
-
-#### 🔄 Estados e persistência
-
-- `sidebar-expanded`, `sidebar-attached`, `sidebar-position` no `localStorage`.
-- Auto-fecha em mobile ao navegar ou clicar no overlay.
-
-#### 📱 Breakpoints
-
-| Breakpoint | Comportamento |
-|-----------|---------------|
-| <768px    | Drawer fullscreen com overlay |
-| 768-1023  | Drawer overlay mais largo |
-| ≥1024     | Flutuante ou anexado, posição esquerda/direita |
-
-## 🔒 Boas práticas de segurança
-
-- Não commite `.env`
-- Use variáveis de ambiente para segredos
-- Atualize dependências regularmente
-- Revise código antes de deploy
-
-## 📝 Customização rápida
-
-- **Banco de dados**: ajuste `.env` e `config/database.php` (MySQL/Postgres/etc.).
-- **Novos pacotes**: `composer require pacote` ou `npm install pacote`.
-- **Tema**: personalize PrimeVue em `resources/js/app.js` e Tailwind em `resources/css/app.css`.
-
-## 🤝 Contribuindo
-
-1) Forke o projeto
-2) Crie uma branch (`feature/minha-feature`)
-3) Commit (`git commit -m "Minha feature"`)
-4) Push
-5) Abra um PR
-
-## 📄 Licença
-
-MIT License.
-
-## 🙏 Créditos
-
-- Laravel, Vue.js, Inertia.js, Tailwind CSS, PrimeVue, Pest
-
-## 📞 Suporte
-
-- Abra uma issue
-- Documentação Laravel: https://laravel.com/docs
-- Comunidade Laravel Brasil: https://laravel.com.br

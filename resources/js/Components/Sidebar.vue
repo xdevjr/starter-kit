@@ -117,7 +117,9 @@
                             <!-- Versão expandida com submenu interno -->
                             <button v-if="isExpanded" @click="toggleSubmenuByIndex(index)" :class="[
                                 'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer gap-4',
-                                'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                isSubmenuActive(item)
+                                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                             ]">
                                 <i :class="['text-lg shrink-0', item.icon]" />
                                 <div class="flex items-center justify-between flex-1 min-w-0">
@@ -134,7 +136,9 @@
                                 <button :key="`${item.label}-${sidebarPosition}`" @click="openCollapsedSubmenu(index)"
                                     v-tooltip="getTooltipConfig(item.label)" :class="[
                                         'w-full flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer justify-center',
-                                        'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                        isSubmenuActive(item)
+                                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                     ]">
                                     <i :class="['text-lg shrink-0', item.icon]" />
                                 </button>
@@ -303,6 +307,17 @@ const props = defineProps({
         type: Array,
         required: true,
         validator: (value) => Array.isArray(value) && value.length > 0
+    },
+    initialState: {
+        type: Object,
+        default: () => ({}),
+        validator: (value) => {
+            return (
+                (value.expanded === undefined || typeof value.expanded === 'boolean') &&
+                (value.attached === undefined || typeof value.attached === 'boolean') &&
+                (value.position === undefined || ['left', 'right'].includes(value.position))
+            );
+        }
     }
 });
 
@@ -325,11 +340,20 @@ const openCollapsedSubmenu = (index) => {
 
     // Persiste estado no desktop
     if (window.innerWidth >= 1024) {
-        localStorage.setItem(STORAGE_KEY, 'true');
+        saveState({ expanded: true });
     }
 };
 const isSubmenuExpanded = (index) => {
     return expandedMenusMap.value.get(getMenuKey(index)) || false;
+};
+
+// Abre automaticamente submenus que contêm itens ativos
+const openActiveSubmenus = () => {
+    props.items.forEach((item, index) => {
+        if (isSubmenuActive(item)) {
+            expandedMenusMap.value.set(getMenuKey(index), true);
+        }
+    });
 };
 
 // Computed para determinar a posição do tooltip
@@ -369,7 +393,7 @@ const toggleUserSubmenu = () => {
         if (!isExpanded.value) {
             isExpanded.value = true;
             if (window.innerWidth >= 1024) {
-                localStorage.setItem(STORAGE_KEY, 'true');
+                saveState({ expanded: true });
             }
         }
     } else {
@@ -411,14 +435,22 @@ const isActionActive = (action) => {
             const currentPath = getPath(currentRoute.url);
             const actionPath = getPath(action);
 
-            // Verifica correspondência exata ou como prefixo de rota
-            return currentPath === actionPath || currentPath.startsWith(actionPath + '/');
+            // Verifica correspondência exata apenas
+            return currentPath === actionPath;
         } catch (e) {
             // Fallback para page.url caso router.current() falhe
             const currentPath = getPath(page.url);
             const actionPath = getPath(action);
-            return currentPath === actionPath || currentPath.startsWith(actionPath + '/');
+            return currentPath === actionPath;
         }
+    }
+    return false;
+};
+
+const isSubmenuActive = (item) => {
+    // Verifica se algum item do submenu está ativo
+    if (item.submenu && item.submenu.length > 0) {
+        return item.submenu.some(child => isActionActive(child.action));
     }
     return false;
 };
@@ -427,39 +459,93 @@ const logout = () => {
     router.post(route('logout'));
 };
 
+// Chave única para armazenar todos os estados do sidebar
+const STORAGE_KEY = 'sidebar';
+
+// Estado padrão
+const DEFAULT_STATE = {
+    expanded: true,
+    attached: false,
+    position: 'left'
+};
+
+// Mescla initialState com DEFAULT_STATE
+const getInitialState = () => ({
+    ...DEFAULT_STATE,
+    ...props.initialState
+});
+
+// Carrega estado do localStorage ou retorna padrão
+const loadState = () => {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : { ...getInitialState() };
+    } catch (e) {
+        console.error('Erro ao carregar estado da sidebar:', e);
+        return { ...getInitialState() };
+    }
+};
+
+// Salva estado unificado no localStorage
+const saveState = (state = {}) => {
+    try {
+        const currentState = loadState();
+        const newState = { ...currentState, ...state };
+        const initialState = getInitialState();
+
+        // Se o novo estado é igual ao inicial, apaga do localStorage
+        if (JSON.stringify(newState) === JSON.stringify(initialState)) {
+            localStorage.removeItem(STORAGE_KEY);
+        } else {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+        }
+    } catch (e) {
+        console.error('Erro ao salvar estado da sidebar:', e);
+    }
+};
+
 const toggleAttached = () => {
     isAttached.value = !isAttached.value;
-    localStorage.setItem('sidebar-attached', JSON.stringify(isAttached.value));
+    saveState({ attached: isAttached.value });
 };
 
 const togglePosition = () => {
     sidebarPosition.value = sidebarPosition.value === 'left' ? 'right' : 'left';
-    localStorage.setItem('sidebar-position', sidebarPosition.value);
+    saveState({ position: sidebarPosition.value });
 };
 
 // Carrega estado do localStorage ao montar
 onMounted(() => {
-    // Carrega estado da sidebar (expandido/retraído)
-    loadSidebarState();
+    // Carrega todos os estados de uma só vez
+    const savedState = loadState();
     window.addEventListener('resize', checkScreenSize);
 
-    // Carrega estado anexado
-    const saved = localStorage.getItem('sidebar-attached');
-    if (saved !== null) {
-        isAttached.value = JSON.parse(saved);
+    // No desktop, usa estado salvo; no mobile, sempre começa fechado
+    if (window.innerWidth >= 1024) {
+        isExpanded.value = savedState.expanded;
+        isAttached.value = savedState.attached;
+        sidebarPosition.value = savedState.position;
+    } else {
+        isExpanded.value = false;
+        isAttached.value = savedState.attached;
+        sidebarPosition.value = savedState.position;
     }
 
-    // Carrega posição da sidebar
-    const savedPosition = localStorage.getItem('sidebar-position');
-    if (savedPosition !== null) {
-        sidebarPosition.value = savedPosition;
-    }
+    // Abre submenus que contêm itens ativos
+    openActiveSubmenus();
 });
 
 // Fecha menu ao navegar em mobile e fecha submenus
 watch(() => page.url, () => {
-    // Fecha submenus ao navegar
-    expandedMenusMap.value.clear();
+    // Fecha apenas submenus que NÃO contêm itens ativos
+    props.items.forEach((item, index) => {
+        if (!isSubmenuActive(item)) {
+            expandedMenusMap.value.delete(getMenuKey(index));
+        }
+    });
+
+    // Garante que submenus com itens ativos estão abertos
+    openActiveSubmenus();
 
     // Fecha menu mobile se em mobile
     if (window.innerWidth < 1024) {
@@ -467,16 +553,14 @@ watch(() => page.url, () => {
     }
 });
 
-const STORAGE_KEY = 'sidebar-expanded';
-
 // Carrega estado do localStorage ou detecta tamanho da tela
 const loadSidebarState = () => {
     const isDesktop = window.innerWidth >= 1024;
+    const savedState = loadState();
 
     if (isDesktop) {
-        // No desktop, carrega do localStorage (padrão: true)
-        const saved = localStorage.getItem(STORAGE_KEY);
-        isExpanded.value = saved !== null ? saved === 'true' : true;
+        // No desktop, carrega do localStorage
+        isExpanded.value = savedState.expanded;
     } else {
         // No mobile, sempre começa fechado
         isExpanded.value = false;
@@ -501,17 +585,17 @@ const themeOptions = [
 const toggleSidebar = () => {
     isExpanded.value = !isExpanded.value;
 
-    // Ao expandir, mantém exclusividade e limpa submenus recolhidos
-    if (isExpanded.value) {
-        expandedMenusMap.value.clear();
-    } else {
-        // Ao retrair, limpa estados de submenu
-        expandedMenusMap.value.clear();
-    }
+    // Preserva os submenus que contêm itens ativos
+    // Remove apenas submenus inativos
+    props.items.forEach((item, index) => {
+        if (!isSubmenuActive(item)) {
+            expandedMenusMap.value.delete(getMenuKey(index));
+        }
+    });
 
     // Salva estado apenas no desktop
     if (window.innerWidth >= 1024) {
-        localStorage.setItem(STORAGE_KEY, isExpanded.value.toString());
+        saveState({ expanded: isExpanded.value });
     }
 };
 

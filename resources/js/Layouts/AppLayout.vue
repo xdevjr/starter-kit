@@ -1,5 +1,5 @@
 <template>
-    <Sidebar v-if="isAuthenticated" :items="sidebarItems">
+    <Sidebar v-if="isAuthenticated" :items="sidebarItems" :initialState="{ expanded: false }">
         <template #content>
             <slot />
         </template>
@@ -27,6 +27,22 @@ const sidebarItems = [
         label: 'Dashboard',
         action: route('dashboard'),
         icon: 'pi pi-chart-bar'
+    },
+    {
+        label: 'Usuários',
+        icon: 'pi pi-users',
+        submenu: [
+            {
+                label: 'Tabela',
+                action: route('users.table'),
+                icon: 'pi pi-table'
+            },
+            {
+                label: 'Lista de Cartões',
+                action: route('users.card'),
+                icon: 'pi pi-th-large'
+            }
+        ]
     },
     {
         label: 'Projetos',
