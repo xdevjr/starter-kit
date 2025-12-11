@@ -209,7 +209,7 @@
                                 <div class="flex-1 min-w-0 text-left overflow-hidden" v-if="isExpanded">
                                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{
                                         userFirstName
-                                        }}</p>
+                                    }}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
                                 </div>
                                 <i v-if="isExpanded" :class="[
@@ -277,16 +277,49 @@
         </div>
     </div>
 </template>
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
-import { useTheme } from '@/Composables/useTheme';
+import { useTheme } from '@/composables/useTheme';
+import type { ThemeType } from '@/types/theme';
 import Avatar from 'primevue/avatar';
+import type { PageProps } from '@inertiajs/core';
 
-const page = usePage();
-const isExpanded = ref(false); // Inicia fechado em mobile
-const isAttached = ref(false); // Estado para sidebar fixado na lateral
-const sidebarPosition = ref('left'); // Posição da sidebar: 'left' ou 'right'
+interface MenuItem {
+    label: string;
+    icon: string;
+    action: string | (() => void);
+    submenu?: MenuItem[];
+}
+
+interface InitialState {
+    expanded?: boolean;
+    attached?: boolean;
+    position?: 'left' | 'right';
+}
+
+interface SidebarState {
+    expanded: boolean;
+    attached: boolean;
+    position: 'left' | 'right';
+}
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
+interface ThemeOption {
+    label: string;
+    value: ThemeType;
+    icon: string;
+}
+
+const page = usePage<PageProps & { auth?: { user?: User } }>();
+const isExpanded = ref(false);
+const isAttached = ref(false);
+const sidebarPosition = ref<'left' | 'right'>('left');
 const { currentTheme, setTheme, THEMES } = useTheme();
 
 const user = computed(() => page.props.auth?.user);
@@ -304,53 +337,42 @@ const userFirstName = computed(() => {
 });
 
 // Props do componente
-const props = defineProps({
-    items: {
-        type: Array,
-        required: true,
-        validator: (value) => Array.isArray(value) && value.length > 0
-    },
-    initialState: {
-        type: Object,
-        default: () => ({}),
-        validator: (value) => {
-            return (
-                (value.expanded === undefined || typeof value.expanded === 'boolean') &&
-                (value.attached === undefined || typeof value.attached === 'boolean') &&
-                (value.position === undefined || ['left', 'right'].includes(value.position))
-            );
-        }
+const props = withDefaults(
+    defineProps<{
+        items: MenuItem[];
+        initialState?: InitialState;
+    }>(),
+    {
+        initialState: () => ({}),
     }
-});
+);
 
 // Map de índices para rastrear submenus abertos
-const expandedMenusMap = ref(new Map());
+const expandedMenusMap = ref<Map<string, boolean>>(new Map());
 const USER_MENU_KEY = 'user-menu';
 
-const getMenuKey = (index) => `menu-${index}`;
-const toggleSubmenuByIndex = (index) => {
+const getMenuKey = (index: number): string => `menu-${index}`;
+
+const toggleSubmenuByIndex = (index: number): void => {
     const key = getMenuKey(index);
     const current = expandedMenusMap.value.get(key) || false;
     expandedMenusMap.value.set(key, !current);
 };
-const openCollapsedSubmenu = (index) => {
-    // Abre o submenu e expande a sidebar se necessário
-    expandedMenusMap.value.set(getMenuKey(index), true);
 
-    // Expande a sidebar para mostrar submenu interno
+const openCollapsedSubmenu = (index: number): void => {
+    expandedMenusMap.value.set(getMenuKey(index), true);
     isExpanded.value = true;
 
-    // Persiste estado no desktop
     if (window.innerWidth >= 1024) {
         saveState({ expanded: true });
     }
 };
-const isSubmenuExpanded = (index) => {
+
+const isSubmenuExpanded = (index: number): boolean => {
     return expandedMenusMap.value.get(getMenuKey(index)) || false;
 };
 
-// Abre automaticamente submenus que contêm itens ativos
-const openActiveSubmenus = () => {
+const openActiveSubmenus = (): void => {
     props.items.forEach((item, index) => {
         if (isSubmenuActive(item)) {
             expandedMenusMap.value.set(getMenuKey(index), true);
@@ -365,8 +387,7 @@ const tooltipPosition = computed(() => sidebarPosition.value === 'left' ? 'right
 const tooltipArrowColor = computed(() => tooltipPosition.value === 'right' ? 'borderRightColor' : 'borderLeftColor');
 
 // Helper para criar tooltip com posição correta baseada em sidebarPosition - reactive
-const getTooltipConfig = (label) => {
-    // Força reatividade lendo os computeds
+const getTooltipConfig = (label: string) => {
     const pos = tooltipPosition.value;
     const arrowProp = tooltipArrowColor.value;
 
@@ -386,12 +407,11 @@ const getTooltipConfig = (label) => {
 
 const isUserSubmenuExpanded = computed(() => expandedMenusMap.value.get(USER_MENU_KEY) || false);
 
-const toggleUserSubmenu = () => {
+const toggleUserSubmenu = (): void => {
     const next = !expandedMenusMap.value.get(USER_MENU_KEY);
 
     if (next) {
         expandedMenusMap.value.set(USER_MENU_KEY, true);
-        // Se estiver recolhido, expande para mostrar submenu inline
         if (!isExpanded.value) {
             isExpanded.value = true;
             if (window.innerWidth >= 1024) {
@@ -403,87 +423,86 @@ const toggleUserSubmenu = () => {
     }
 };
 
-const isStringAction = (action) => typeof action === 'string';
+const isStringAction = (action: string | (() => void)): action is string => {
+    return typeof action === 'string';
+};
 
-const executeAction = (action) => {
+const executeAction = (action: string | (() => void)): void => {
     if (typeof action === 'function') {
         action();
     } else if (isStringAction(action)) {
-        // Se for uma string, assume que é uma rota e navega
         router.visit(action);
     }
 };
 
-const isActionActive = (action) => {
+const isActionActive = (action: string | (() => void)): boolean => {
     if (typeof action === 'string') {
-        // Extrai apenas o caminho da URL (remove domínio e query strings)
-        const getPath = (url) => {
+        const getPath = (url: string): string => {
             try {
-                // Tenta fazer parse como URL
                 const urlObj = new URL(url);
                 const path = urlObj.pathname;
-                // Remove trailing slash
                 return (path.replace(/\/$/, '') || '/').toLowerCase();
             } catch (e) {
-                // Se não for URL completa, trata como caminho direto
                 const path = url.split('?')[0];
                 return (path.replace(/\/$/, '') || '/').toLowerCase();
             }
         };
 
-        // Usa router.current() para pegar a rota atual de forma mais confiável
         try {
-            const currentRoute = router.current();
-            const currentPath = getPath(currentRoute.url);
-            const actionPath = getPath(action);
-
-            // Verifica correspondência exata apenas
-            return currentPath === actionPath;
+            const currentRoute = (router as any).current?.();
+            if (currentRoute) {
+                const currentPath = getPath(currentRoute.url);
+                const actionPath = getPath(action);
+                return currentPath === actionPath;
+            }
         } catch (e) {
-            // Fallback para page.url caso router.current() falhe
-            const currentPath = getPath(page.url);
-            const actionPath = getPath(action);
-            return currentPath === actionPath;
+            // Fallback para page.url
         }
+
+        const currentPath = getPath(page.url);
+        const actionPath = getPath(action);
+        return currentPath === actionPath;
     }
     return false;
 };
 
-const isSubmenuActive = (item) => {
-    // Verifica se algum item do submenu está ativo
+const isSubmenuActive = (item: MenuItem): boolean => {
     if (item.submenu && item.submenu.length > 0) {
         return item.submenu.some(child => isActionActive(child.action));
     }
     return false;
 };
 
-const isUserMenuActive = () => {
-    // Verifica se algum item do menu do usuário está ativo
+const isUserMenuActive = (): boolean => {
     return isActionActive(route('profile.edit'));
 };
 
-const logout = () => {
+const logout = (): void => {
     router.post(route('logout'));
+};
+
+const route = (name: string, params?: Record<string, any>): string => {
+    return (window as any).route(name, params);
 };
 
 // Chave única para armazenar todos os estados do sidebar
 const STORAGE_KEY = 'sidebar';
 
 // Estado padrão
-const DEFAULT_STATE = {
+const DEFAULT_STATE: SidebarState = {
     expanded: true,
     attached: false,
     position: 'left'
 };
 
 // Mescla initialState com DEFAULT_STATE
-const getInitialState = () => ({
+const getInitialState = (): SidebarState => ({
     ...DEFAULT_STATE,
     ...props.initialState
 });
 
 // Carrega estado do localStorage ou retorna padrão
-const loadState = () => {
+const loadState = (): SidebarState => {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? JSON.parse(saved) : { ...getInitialState() };
@@ -494,13 +513,12 @@ const loadState = () => {
 };
 
 // Salva estado unificado no localStorage
-const saveState = (state = {}) => {
+const saveState = (state: Partial<SidebarState> = {}): void => {
     try {
         const currentState = loadState();
-        const newState = { ...currentState, ...state };
+        const newState: SidebarState = { ...currentState, ...state };
         const initialState = getInitialState();
 
-        // Se o novo estado é igual ao inicial, apaga do localStorage
         if (JSON.stringify(newState) === JSON.stringify(initialState)) {
             localStorage.removeItem(STORAGE_KEY);
         } else {
@@ -511,23 +529,21 @@ const saveState = (state = {}) => {
     }
 };
 
-const toggleAttached = () => {
+const toggleAttached = (): void => {
     isAttached.value = !isAttached.value;
     saveState({ attached: isAttached.value });
 };
 
-const togglePosition = () => {
+const togglePosition = (): void => {
     sidebarPosition.value = sidebarPosition.value === 'left' ? 'right' : 'left';
     saveState({ position: sidebarPosition.value });
 };
 
 // Carrega estado do localStorage ao montar
 onMounted(() => {
-    // Carrega todos os estados de uma só vez
     const savedState = loadState();
     window.addEventListener('resize', checkScreenSize);
 
-    // No desktop, usa estado salvo; no mobile, sempre começa fechado
     if (window.innerWidth >= 1024) {
         isExpanded.value = savedState.expanded;
         isAttached.value = savedState.attached;
@@ -538,86 +554,77 @@ onMounted(() => {
         sidebarPosition.value = savedState.position;
     }
 
-    // Abre submenus que contêm itens ativos
     openActiveSubmenus();
 });
 
 // Fecha menu ao navegar em mobile e fecha submenus
 watch(() => page.url, () => {
-    // Fecha apenas submenus que NÃO contêm itens ativos
     props.items.forEach((item, index) => {
         if (!isSubmenuActive(item)) {
             expandedMenusMap.value.delete(getMenuKey(index));
         }
     });
 
-    // Garante que submenus com itens ativos estão abertos
     openActiveSubmenus();
 
-    // Fecha menu mobile se em mobile
     if (window.innerWidth < 1024) {
         isExpanded.value = false;
     }
 });
 
 // Detecta mudança de tamanho de tela
-const checkScreenSize = () => {
+const checkScreenSize = (): void => {
     const isDesktop = window.innerWidth >= 1024;
     const savedState = loadState();
 
     if (isDesktop) {
-        // Volta para desktop: restaura estado salvo no localStorage
         isExpanded.value = savedState.expanded;
         isAttached.value = savedState.attached;
         sidebarPosition.value = savedState.position;
     } else {
-        // Muda para mobile/tablet: desativa modo anexado e fechra menu
         isExpanded.value = false;
         isAttached.value = false;
-        sidebarPosition.value = savedState.position; // Mantém a posição
+        sidebarPosition.value = savedState.position;
     }
 };
-
 
 onUnmounted(() => {
     window.removeEventListener('resize', checkScreenSize);
 });
-const themeOptions = [
-    { label: 'Claro', value: THEMES.LIGHT, icon: 'pi pi-sun' },
-    { label: 'Escuro', value: THEMES.DARK, icon: 'pi pi-moon' },
-    { label: 'Sistema', value: THEMES.SYSTEM, icon: 'pi pi-desktop' },
+
+const themeOptions: ThemeOption[] = [
+    { label: 'Claro', value: THEMES.LIGHT as ThemeType, icon: 'pi pi-sun' },
+    { label: 'Escuro', value: THEMES.DARK as ThemeType, icon: 'pi pi-moon' },
+    { label: 'Sistema', value: THEMES.SYSTEM as ThemeType, icon: 'pi pi-desktop' },
 ];
 
-const toggleSidebar = () => {
+const toggleSidebar = (): void => {
     isExpanded.value = !isExpanded.value;
 
-    // Preserva os submenus que contêm itens ativos
-    // Remove apenas submenus inativos
     props.items.forEach((item, index) => {
         if (!isSubmenuActive(item)) {
             expandedMenusMap.value.delete(getMenuKey(index));
         }
     });
 
-    // Salva estado apenas no desktop
     if (window.innerWidth >= 1024) {
         saveState({ expanded: isExpanded.value });
     }
 };
 
-const cycleTheme = () => {
+const cycleTheme = (): void => {
     const themeValues = [THEMES.LIGHT, THEMES.DARK, THEMES.SYSTEM];
-    const currentIndex = themeValues.indexOf(currentTheme.value);
+    const currentIndex = themeValues.indexOf(currentTheme.value as any);
     const nextIndex = (currentIndex + 1) % themeValues.length;
-    setTheme(themeValues[nextIndex]);
+    setTheme(themeValues[nextIndex] as any);
 };
 
-const getCurrentThemeIcon = () => {
+const getCurrentThemeIcon = (): string => {
     const option = themeOptions.find(opt => opt.value === currentTheme.value);
     return option ? option.icon : 'pi pi-sun';
 };
 
-const getCurrentThemeLabel = () => {
+const getCurrentThemeLabel = (): string => {
     const option = themeOptions.find(opt => opt.value === currentTheme.value);
     return option ? option.label : 'Sistema';
 };

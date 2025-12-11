@@ -5,8 +5,8 @@ Ponto de partida moderno para apps Laravel com Vue 3, Inertia e PrimeVue. Inclui
 ## 🚀 Stack
 
 - **Backend**: Laravel 12, PHP 8.2+, SQLite por padrão (fácil trocar)
-- **Frontend**: Vue 3, Inertia.js, Vite, Tailwind CSS, PrimeVue 4, PrimeIcons
-- **Qualidade**: Pest, Laravel Pint
+- **Frontend**: Vue 3, TypeScript, Inertia.js, Vite, Tailwind CSS, PrimeVue 4, PrimeIcons
+- **Qualidade**: Pest, Laravel Pint, TypeScript strict mode
 - **Produtividade**: Macro `withToast`, Laravel Boost, auto-import de componentes
 - **DevOps**: Laravel Sail opcional, scripts Composer (`setup`, `dev`, `test`)
 
@@ -64,6 +64,47 @@ npm run build
 composer test
 # ou
 php artisan test
+```
+
+### Type-checking TypeScript
+
+```bash
+npm run type-check
+```
+
+Valida todos os componentes Vue, composables e arquivos TypeScript usando `vue-tsc`.
+
+## 🦾 TypeScript
+
+Este projeto é **100% TypeScript** no frontend:
+
+- **Type-safe**: Todos os componentes Vue, composables e utilitários com tipos completos
+- **Strict mode**: Configuração TypeScript com modo estrito habilitado
+- **Arquitetura**:
+  - `resources/js/app.ts` - Entry point da aplicação
+  - `resources/js/bootstrap.ts` - Configuração do Axios e utilitários globais
+  - `resources/js/composables/` - Composables reativos (useTheme, usePagination)
+  - `resources/js/types/` - Definições de tipo centralizadas
+  - `resources/js/Components/` - Componentes Vue 3 com setup script
+  - `resources/js/Pages/` - Páginas Inertia com tipos automáticos
+
+**Exemplo de componente TypeScript:**
+
+```typescript
+<script setup lang="ts">
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import type { PageProps } from '@inertiajs/core';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+const page = usePage<PageProps & { auth?: { user?: User } }>();
+const user = computed(() => page.props.auth?.user);
+</script>
 ```
 
 ## 👤 Experiência da conta
@@ -358,30 +399,30 @@ const toggleSort = (field) => {
 ### API do Composable
 
 **Parametros de inicialização:**
-```javascript
-{
-  endpoint,              // string - URL da API (obrigatório)
-  storageKey,           // string - chave localStorage para persistência (obrigatório)
-  initialFilters,       // object - filtros iniciais, default: {}
-  initialSort,          // array|null - [{field: 'id', direction: 'asc'}], default: null
-  initialPage,          // number - página inicial, default: 1
-  initialRows,          // number|'global' - itens por página, 'global' compartilha entre tabelas, default: 10
-  autoFetch,            // boolean - buscar dados automaticamente ao mudar page/rows/sort, default: true
-  pageName,             // string - nome do parâmetro de página, default: 'page'
+```typescript
+interface UsePaginationOptions {
+  endpoint: string;              // URL da API (obrigatório)
+  storageKey: string;            // chave localStorage para persistência (obrigatório)
+  initialFilters?: Record<string, any>;  // filtros iniciais, default: {}
+  initialSort?: { field: string; direction: 'asc' | 'desc' }[] | null;  // default: null
+  initialPage?: number;          // página inicial, default: 1
+  initialRows?: number | 'global';  // itens por página, 'global' compartilha entre tabelas, default: 10
+  autoFetch?: boolean;           // buscar dados automaticamente, default: true
+  pageName?: string;             // nome do parâmetro de página, default: 'page'
 }
 ```
 
 **Propriedades retornadas:**
-```javascript
-{
+```typescript
+interface UsePaginationReturn {
   // Estado
-  loading,              // ref<boolean> - carregando
-  data,                 // ref<array> - dados da página
-  total,                // ref<number> - total de registros
-  page,                 // ref<number> - página atual
-  rows,                 // ref<number> - itens por página
-  filters,              // reactive<object> - filtros ativos
-  sort,                 // ref<array> - ordenações ativas [{field, direction}]
+  loading: Ref<boolean>;         // carregando
+  data: Ref<any[]>;              // dados da página
+  total: Ref<number>;            // total de registros
+  page: Ref<number>;             // página atual
+  rows: Ref<number>;             // itens por página
+  filters: Record<string, any>;   // filtros ativos
+  sort: Ref<SortItem[]>;         // ordenações ativas
   
   // Métodos
   fetch,                // () => Promise - buscar dados manualmente
@@ -599,23 +640,21 @@ const customState = {
 ### Props
 
 - **`items`** (obrigatório): Array de itens do menu
-  ```javascript
-  [
-    {
-      label: 'Item Label',        // Texto exibido
-      action?: string|function,   // URL (route()) ou função callback
-      icon?: string,              // Classe de ícone PrimeIcons
-      submenu?: Item[]            // Subitens para dropdown
-    }
-  ]
+  ```typescript
+  interface SidebarItem {
+    label: string;              // Texto exibido
+    action?: string | (() => void);  // URL (route()) ou função callback
+    icon?: string;              // Classe de ícone PrimeIcons
+    submenu?: SidebarItem[];    // Subitens para dropdown
+  }
   ```
 
 - **`initialState`** (opcional): Customiza o estado inicial
-  ```javascript
-  {
-    expanded: true,      // Expandido inicialmente
-    attached: false,     // Flutuante (false) ou anexado/sticky (true)
-    position: 'left'     // 'left' ou 'right'
+  ```typescript
+  interface SidebarState {
+    expanded: boolean;      // Expandido inicialmente
+    attached: boolean;      // Flutuante (false) ou anexado/sticky (true)
+    position: 'left' | 'right';  // 'left' ou 'right'
   }
   ```
 

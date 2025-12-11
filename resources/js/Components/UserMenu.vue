@@ -12,18 +12,36 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
 import Avatar from 'primevue/avatar';
+import type { PageProps } from '@inertiajs/core';
 
-const menu = ref(null);
-const page = usePage();
+interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
+interface MenuItem {
+    label?: string;
+    icon?: string;
+    command?: () => void;
+    separator?: boolean;
+}
+
+const menu = ref<InstanceType<typeof Menu> | null>(null);
+const page = usePage<PageProps & { auth?: { user?: User } }>();
 const user = computed(() => page.props.auth?.user);
 
-const items = [
+const route = (name: string, params?: Record<string, any>): string => {
+    return (window as any).route(name, params);
+};
+
+const items: MenuItem[] = [
     {
         label: 'Meu Perfil',
         icon: 'pi pi-user',
@@ -49,7 +67,7 @@ const firstName = computed(() => {
     return user.value.name.trim().split(/\s+/)[0];
 });
 
-function toggleMenu(event) {
+function toggleMenu(event: Event): void {
     menu.value?.toggle(event);
 }
 </script>

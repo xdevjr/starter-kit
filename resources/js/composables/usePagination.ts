@@ -1,29 +1,43 @@
-// Composable para paginação e filtros, compatível com PrimeVue DataTable
 import { ref, reactive, watch } from "vue";
+import type { Ref, UnwrapRef } from "vue";
 import axios from "axios";
+import type {
+    SortItem,
+    MultiSortMeta,
+    PaginationEvent,
+    SortChangeEvent,
+    PageChangeEvent,
+    UsePaginationOptions,
+    UsePaginationReturn,
+} from "@/types/pagination";
 
-export default function usePagination({
-    endpoint,
-    storageKey,
-    initialFilters = {},
-    initialSort = null,
-    initialPage = 1,
-    initialRows = 10,
-    autoFetch = true,
-    pageName = "page",
-}) {
+export default function usePagination(
+    options: UsePaginationOptions
+): UsePaginationReturn {
+    const {
+        endpoint,
+        storageKey,
+        initialFilters = {},
+        initialSort = null,
+        initialPage = 1,
+        initialRows = 10,
+        autoFetch = true,
+        pageName = "page",
+    } = options;
+
     // Validar se storageKey foi fornecido
     if (!storageKey) {
         throw new Error("storageKey é obrigatório no composable usePagination");
     }
-    const loading = ref(false);
-    const data = ref([]);
-    const total = ref(0);
-    const page = ref(initialPage);
+
+    const loading: Ref<boolean> = ref(false);
+    const data: Ref<any[]> = ref([]);
+    const total: Ref<number> = ref(0);
+    const page: Ref<number> = ref(initialPage);
 
     // Determinar rows: se initialRows é 'global', buscar do localStorage, senão usar o valor
     const isGlobalRows = initialRows === "global";
-    const defaultRows = isGlobalRows ? 10 : initialRows;
+    const defaultRows = isGlobalRows ? 10 : (initialRows as number);
 
     // Tentar restaurar rows global do localStorage se configurado
     let globalRows = defaultRows;
@@ -31,39 +45,46 @@ export default function usePagination({
         try {
             const stored = localStorage.getItem("global_rows");
             if (stored) {
-                globalRows = parseInt(stored);
+                globalRows = parseInt(stored, 10);
             }
         } catch (e) {
             globalRows = defaultRows;
         }
     }
 
-    const rows = ref(globalRows);
+    const rows: Ref<number> = ref(globalRows);
 
     // Tenta restaurar filtros, sort e rows do localStorage
-    let savedState = {};
+    interface SavedState {
+        filters?: Record<string, any>;
+        sort?: SortItem[];
+        rows?: number;
+    }
+
+    let savedState: SavedState = {};
     try {
-        savedState = JSON.parse(localStorage.getItem(storageKey)) || {};
+        savedState = JSON.parse(localStorage.getItem(storageKey) || "{}");
     } catch (e) {
         savedState = {};
     }
-    const filters = reactive({
+
+    const filters: UnwrapRef<Record<string, any>> = reactive({
         ...initialFilters,
         ...(savedState.filters || {}),
     });
 
     // Sort agora é um array de objetos: [{field: 'id', direction: 'asc'}, {field: 'name', direction: 'desc'}]
-    const initialSortArray = initialSort
+    const initialSortArray: SortItem[] = initialSort
         ? Array.isArray(initialSort)
             ? initialSort
             : [initialSort]
         : [];
 
     // Converter sort salvo do localStorage para o novo formato se necessário
-    const normalizeSortArray = (savedSort) => {
+    const normalizeSortArray = (savedSort: any): SortItem[] => {
         if (!savedSort || savedSort.length === 0) return initialSortArray;
 
-        return savedSort.map((item) => {
+        return savedSort.map((item: any) => {
             // Se é string 'field,order', converte para objeto
             if (typeof item === "string") {
                 const [field, direction] = item.split(",");
@@ -75,7 +96,7 @@ export default function usePagination({
     };
 
     const savedSort = normalizeSortArray(savedState.sort);
-    const sort = ref(savedSort);
+    const sort: Ref<SortItem[]> = ref(savedSort);
 
     // Restaurar rows do localStorage se existir (apenas se não for global)
     if (!isGlobalRows && savedState.rows) {
@@ -83,17 +104,17 @@ export default function usePagination({
     }
 
     // Função para buscar dados do backend
-    const fetch = async () => {
+    const fetch = async (): Promise<void> => {
         loading.value = true;
         try {
             const params = new URLSearchParams();
-            params.append(pageName, page.value);
-            params.append("per_page", rows.value);
+            params.append(pageName, page.value.toString());
+            params.append("per_page", rows.value.toString());
 
             // Adicionar filtros como filters[key]=value
             Object.entries(filters).forEach(([key, value]) => {
                 if (value !== "" && value !== null && value !== undefined) {
-                    params.append(`filters[${key}]`, value);
+                    params.append(`filters[${key}]`, String(value));
                 }
             });
 
@@ -105,9 +126,13 @@ export default function usePagination({
                 });
             }
 
-            const response = await axios.get(
-                `${endpoint}?${params.toString()}`
-            );
+            const response = await axios.get<{
+                data?: any[];
+                items?: any[];
+                total?: number;
+                meta?: { total: number };
+            }>(`${endpoint}?${params.toString()}`);
+
             // Adapte conforme o formato do backend
             data.value = response.data.data || response.data.items || [];
             total.value = response.data.total || response.data.meta?.total || 0;
@@ -126,7 +151,7 @@ export default function usePagination({
             }
 
             // Construir estado apenas com valores que diferem dos iniciais
-            const stateToSave = {};
+            const stateToSave: SavedState = {};
 
             // Persistir filtros apenas se diferentes dos iniciais
             if (JSON.stringify(newFilters) !== JSON.stringify(initialFilters)) {
@@ -174,39 +199,47 @@ export default function usePagination({
     );
 
     // Métodos para atualizar estado
-    const setPage = (p) => {
+    const setPage = (p: number): void => {
         page.value = p;
     };
-    const setRows = (r) => {
+
+    const setRows = (r: number): void => {
         rows.value = r;
     };
-    const setSort = (s) => {
+
+    const setSort = (
+        s: SortItem | SortItem[] | string | null | undefined
+    ): void => {
         if (s === null || s === undefined) {
             sort.value = [];
         } else if (Array.isArray(s)) {
             // Converter strings para objetos se necessário
-            sort.value = s.map((item) => {
+            sort.value = s.map((item: any) => {
                 if (typeof item === "string") {
                     const [field, direction] = item.split(",");
-                    return { field, direction };
+                    return { field, direction } as SortItem;
                 }
                 return item;
             });
-        } else {
+        } else if (typeof s === "string") {
             // Compatibilidade com string separada por ;
-            sort.value = s
+            sort.value = (s as string)
                 .split(";")
                 .filter(Boolean)
-                .map((item) => {
+                .map((item: string) => {
                     const [field, direction] = item.split(",");
-                    return { field, direction };
+                    return { field, direction } as SortItem;
                 });
+        } else {
+            sort.value = [s as SortItem];
         }
     };
-    const setFilters = (f) => {
+
+    const setFilters = (f: Record<string, any>): void => {
         Object.assign(filters, f);
     };
-    const clearFilters = () => {
+
+    const clearFilters = (): MultiSortMeta[] => {
         Object.assign(filters, initialFilters);
         sort.value = [...initialSortArray];
         setPage(1);
@@ -217,26 +250,24 @@ export default function usePagination({
 
     // Converte sort array para estrutura multiSortMeta do PrimeVue
     // [{field: 'field1', direction: 'asc'}, {field: 'field2', direction: 'desc'}] -> [{field: 'field1', order: 1}, {field: 'field2', order: -1}]
-    const getSortMeta = () => {
+    const getSortMeta = (): MultiSortMeta[] => {
         if (!sort.value || sort.value.length === 0) return [];
-        return sort.value.map((item) => {
-            const direction =
-                typeof item === "string" ? item.split(",")[1] : item.direction;
-            const field =
-                typeof item === "string" ? item.split(",")[0] : item.field;
+        return sort.value.map((item: SortItem) => {
+            const direction = item.direction;
+            const field = item.field;
             return {
                 field,
-                order: direction === "desc" ? -1 : 1,
+                order: direction === "desc" ? (-1 as const) : (1 as const),
             };
         });
     };
 
     // Armazena meta de sort para reuso no DataTable
-    const multiSortMeta = ref(getSortMeta());
+    const multiSortMeta: Ref<MultiSortMeta[]> = ref(getSortMeta());
 
     // Define sort a partir de multiSortMeta do PrimeVue
     // [{field: 'field1', order: 1}, {field: 'field2', order: -1}] -> [{field: 'field1', direction: 'asc'}, {field: 'field2', direction: 'desc'}]
-    const setSortMeta = (meta) => {
+    const setSortMeta = (meta: MultiSortMeta[]): void => {
         const normalized = Array.isArray(meta) ? meta : [];
         multiSortMeta.value = normalized;
         if (!normalized.length) {
@@ -244,34 +275,36 @@ export default function usePagination({
         } else {
             sort.value = normalized.map((s) => ({
                 field: s.field,
-                direction: s.order === 1 ? "asc" : "desc",
+                direction: s.order === 1 ? ("asc" as const) : ("desc" as const),
             }));
         }
     };
 
     // Aplica filtros com debounce e reseta para página 1
-    let filterDebounceTimer = null;
-    const applyFilters = (debounceMs = 500) => {
-        clearTimeout(filterDebounceTimer);
+    let filterDebounceTimer: NodeJS.Timeout | null = null;
+    const applyFilters = (debounceMs: number = 500): void => {
+        if (filterDebounceTimer) {
+            clearTimeout(filterDebounceTimer);
+        }
         filterDebounceTimer = setTimeout(() => {
             setPage(1);
         }, debounceMs);
     };
 
     // Handlers prontos para eventos do PrimeVue DataTable
-    const handlePageChange = (event) => {
+    const handlePageChange = (event: PageChangeEvent): void => {
         setPage(event.page + 1);
         setRows(event.rows);
     };
 
-    const handleSortChange = (event) => {
+    const handleSortChange = (event: SortChangeEvent): MultiSortMeta[] => {
         const meta = event?.multiSortMeta || [];
         setSortMeta(meta);
         return meta;
     };
 
     // Para integração com PrimeVue DataTable
-    const onTableChange = (event) => {
+    const onTableChange = (event: PaginationEvent): void => {
         setPage(event.page + 1); // PrimeVue começa do 0
         setRows(event.rows);
         setSort(

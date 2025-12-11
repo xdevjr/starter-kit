@@ -2,13 +2,21 @@
     <Toast />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
+import type { PageProps } from '@inertiajs/core';
+
+interface ToastData {
+    severity: 'success' | 'info' | 'warn' | 'error';
+    summary: string;
+    detail: string;
+    life?: number;
+}
 
 const toast = useToast();
-const page = usePage();
+const page = usePage<PageProps & { toast?: ToastData }>();
 
 watch(
     () => page.props?.toast,

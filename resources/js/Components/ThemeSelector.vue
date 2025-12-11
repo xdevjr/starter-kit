@@ -9,18 +9,29 @@
                 : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
         ]" v-tooltip.bottom="option.label">
             <i :class="option.icon"></i>
+            <span v-if="showLabels">{{ option.label }}</span>
         </button>
     </div>
 </template>
 
-<script setup>
-import { useTheme } from '@/Composables/useTheme';
+<script setup lang="ts">
+import { useTheme } from '@/composables/useTheme';
+import type { ThemeOption, ThemeType } from '@/types/theme';
+
+withDefaults(
+    defineProps < {
+        showLabels?: boolean;
+    } > (),
+    {
+        showLabels: false,
+    }
+);
 
 const { currentTheme, setTheme, THEMES } = useTheme();
 
-const options = [
-    { label: 'Claro', value: THEMES.LIGHT, icon: 'pi pi-sun' },
-    { label: 'Escuro', value: THEMES.DARK, icon: 'pi pi-moon' },
-    { label: 'Sistema', value: THEMES.SYSTEM, icon: 'pi pi-desktop' },
+const options: ThemeOption[] = [
+    { label: 'Claro', value: THEMES.LIGHT as ThemeType, icon: 'pi pi-sun' },
+    { label: 'Escuro', value: THEMES.DARK as ThemeType, icon: 'pi pi-moon' },
+    { label: 'Sistema', value: THEMES.SYSTEM as ThemeType, icon: 'pi pi-desktop' },
 ];
 </script>

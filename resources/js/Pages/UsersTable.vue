@@ -58,7 +58,7 @@ import { Head, Link } from '@inertiajs/vue3'
 import Logo from '@/Components/Logo.vue'
 import UserMenu from '@/Components/UserMenu.vue'
 
-import usePagination from '@/Composables/usePagination'
+import usePagination from '@/composables/usePagination'
 
 const {
     data,

@@ -9,15 +9,27 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import Sidebar from '@/Components/Sidebar.vue';
+import type { PageProps } from '@inertiajs/core';
 
-const page = usePage();
+interface SidebarMenuItem {
+    label: string;
+    action: string | (() => void);
+    icon: string;
+    submenu?: SidebarMenuItem[];
+}
+
+const page = usePage<PageProps & { auth?: { user?: any } }>();
 const isAuthenticated = computed(() => !!page.props.auth?.user);
 
-const sidebarItems = [
+const route = (name: string, params?: Record<string, any>): string => {
+    return (window as any).route(name, params);
+};
+
+const sidebarItems: SidebarMenuItem[] = [
     {
         label: 'Home',
         action: route('home'),
@@ -31,6 +43,7 @@ const sidebarItems = [
     {
         label: 'Usuários',
         icon: 'pi pi-users',
+        action: '#',
         submenu: [
             {
                 label: 'Tabela',
@@ -47,6 +60,7 @@ const sidebarItems = [
     {
         label: 'Projetos',
         icon: 'pi pi-folder',
+        action: '#',
         submenu: [
             {
                 label: 'Meus Projetos',
@@ -63,6 +77,7 @@ const sidebarItems = [
     {
         label: 'Configurações',
         icon: 'pi pi-cog',
+        action: '#',
         submenu: [
             {
                 label: 'Gerais',

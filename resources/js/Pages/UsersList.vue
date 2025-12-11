@@ -148,7 +148,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import Paginator from 'primevue/paginator'
 import Logo from '@/Components/Logo.vue'
 import UserMenu from '@/Components/UserMenu.vue'
-import usePagination from '@/Composables/usePagination'
+import usePagination from '@/composables/usePagination'
 
 const {
     data,
