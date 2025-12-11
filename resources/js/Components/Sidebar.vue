@@ -13,10 +13,11 @@
     ]">
         <!-- Botão Hamburguer Mobile/Tablet (oculto quando menu está aberto) -->
         <Transition name="fade">
-            <button v-if="!isExpanded && !isAttached" @click="toggleSidebar" :class="[
-                'lg:hidden fixed top-4 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer',
+            <button v-if="!isExpanded" @click="toggleSidebar" :class="[
+                'fixed top-4 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer',
+                'lg:hidden',
                 sidebarPosition === 'left' ? 'left-4' : 'right-4'
-            ]" style="z-index: 60;">
+            ]" style="z-index: 70;">
                 <i class="pi pi-bars text-gray-700 dark:text-gray-300 text-xl" />
             </button>
         </Transition>
@@ -45,7 +46,7 @@
                 // Desktop: bordas arredondadas quando flutuante, sem bordas quando fixado
                 isAttached ? 'lg:rounded-none' : 'lg:rounded-xl',
                 // Altura: cheia quando anexado ou mobile, automática quando flutuante desktop
-                isAttached ? 'h-screen' : 'h-screen md:h-auto md:max-h-[90vh]',
+                isAttached ? 'h-screen' : 'h-screen lg:h-auto lg:max-h-[90vh]',
                 // Posicionamento quando retraído (não anexado)
                 !isExpanded && !isAttached ? (sidebarPosition === 'left' ? 'lg:fixed lg:left-1 lg:top-1/2 lg:transform lg:-translate-y-1/2' : 'lg:fixed lg:right-1 lg:top-1/2 lg:transform lg:-translate-y-1/2') : '',
                 // Largura responsiva
@@ -199,7 +200,9 @@
                             <button @click="toggleUserSubmenu"
                                 v-tooltip="!isExpanded ? getTooltipConfig(userFirstName) : undefined" :class="[
                                     'w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer',
-                                    'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    isUserMenuActive()
+                                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                                 ]">
                                 <Avatar :label="userInitials" shape="circle"
                                     class="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100 shrink-0" />
@@ -284,7 +287,6 @@ const page = usePage();
 const isExpanded = ref(false); // Inicia fechado em mobile
 const isAttached = ref(false); // Estado para sidebar fixado na lateral
 const sidebarPosition = ref('left'); // Posição da sidebar: 'left' ou 'right'
-const expandedMenus = ref([]);
 const { currentTheme, setTheme, THEMES } = useTheme();
 
 const user = computed(() => page.props.auth?.user);
@@ -455,6 +457,11 @@ const isSubmenuActive = (item) => {
     return false;
 };
 
+const isUserMenuActive = () => {
+    // Verifica se algum item do menu do usuário está ativo
+    return isActionActive(route('profile.edit'));
+};
+
 const logout = () => {
     router.post(route('logout'));
 };
@@ -553,23 +560,22 @@ watch(() => page.url, () => {
     }
 });
 
-// Carrega estado do localStorage ou detecta tamanho da tela
-const loadSidebarState = () => {
+// Detecta mudança de tamanho de tela
+const checkScreenSize = () => {
     const isDesktop = window.innerWidth >= 1024;
     const savedState = loadState();
 
     if (isDesktop) {
-        // No desktop, carrega do localStorage
+        // Volta para desktop: restaura estado salvo no localStorage
         isExpanded.value = savedState.expanded;
+        isAttached.value = savedState.attached;
+        sidebarPosition.value = savedState.position;
     } else {
-        // No mobile, sempre começa fechado
+        // Muda para mobile/tablet: desativa modo anexado e fechra menu
         isExpanded.value = false;
+        isAttached.value = false;
+        sidebarPosition.value = savedState.position; // Mantém a posição
     }
-};
-
-// Detecta mudança de tamanho de tela
-const checkScreenSize = () => {
-    loadSidebarState();
 };
 
 
@@ -614,10 +620,6 @@ const getCurrentThemeIcon = () => {
 const getCurrentThemeLabel = () => {
     const option = themeOptions.find(opt => opt.value === currentTheme.value);
     return option ? option.label : 'Sistema';
-};
-
-const isActive = (href) => {
-    return page.url === href || page.url.startsWith(href + '/');
 };
 </script>
 
