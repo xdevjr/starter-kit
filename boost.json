@@ -1,10 +1,12 @@
 {
     "agents": [
+        "copilot",
         "gemini"
     ],
     "editors": [
         "gemini",
         "vscode"
     ],
-    "guidelines": []
+    "guidelines": [],
+    "herd_mcp": true
 }
