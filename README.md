@@ -46,6 +46,7 @@ npm run build
 
 - Tudo junto: `composer dev` (Laravel em `http://localhost:8000`, queue worker e Vite hot reload).
 - Separado:
+
   ```bash
   php artisan serve
   npm run dev
@@ -121,13 +122,15 @@ const user = computed(() => page.props.auth?.user);
 - Assinatura: `withToast($severity, $summary, $detail, $life = 3000)`.
 - Severities mais comuns: `success`, `info`, `warn`, `error` (mapeados pelo PrimeVue Toast).
 
-**Exemplo simples**
+### Exemplo simples
+
 ```php
 return redirect()->route('dashboard')
   ->withToast('success', 'Perfil atualizado', 'Suas informações foram salvas.');
 ```
 
-**Exemplo com vida customizada**
+### Exemplo com vida customizada
+
 ```php
 return back()->withToast('warn', 'Atenção', 'Revise os campos opcionais.', 5000);
 ```
@@ -279,7 +282,7 @@ Exemplo prático com o componente `UsersList.vue` (lista de cartões com pagina�
         class="hover:shadow-xl transition-all duration-300"
       >
         <template #header>
-          <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 flex items-center gap-4">
+          <div class="bg-linear-to-br from-blue-500 to-indigo-600 p-6 flex items-center gap-4">
             <Avatar 
               :label="user.name.charAt(0).toUpperCase()" 
               size="xlarge" 
@@ -398,7 +401,8 @@ const toggleSort = (field) => {
 
 ### API do Composable
 
-**Parametros de inicialização:**
+#### Parâmetros de inicialização
+
 ```typescript
 interface UsePaginationOptions {
   endpoint: string;              // URL da API (obrigatório)
@@ -413,6 +417,7 @@ interface UsePaginationOptions {
 ```
 
 **Propriedades retornadas:**
+
 ```typescript
 interface UsePaginationReturn {
   // Estado
@@ -502,7 +507,8 @@ Route::get('/api/users', function (\Illuminate\Http\Request $request) {
 ```
 
 **Exemplo de URL gerada:**
-```
+
+```http
 GET /api/users?page=1&per_page=10&filters[name]=john&sort[]=id,asc&sort[]=name,desc
 ```
 
@@ -578,7 +584,7 @@ class UserController extends Controller
 
 Menu lateral flutuante/responsivo independente do layout, com controle de posição, anexação e persistência de estado.
 
-### Características principais
+### Características principais do Sidebar
 
 - ✅ **Menu lateral flutuante (desktop) ou drawer fullscreen (mobile/tablet)**
 - ✅ **Posição configurável: esquerda ou direita**
@@ -640,6 +646,7 @@ const customState = {
 ### Props
 
 - **`items`** (obrigatório): Array de itens do menu
+
   ```typescript
   interface SidebarItem {
     label: string;              // Texto exibido
@@ -650,6 +657,7 @@ const customState = {
   ```
 
 - **`initialState`** (opcional): Customiza o estado inicial
+
   ```typescript
   interface SidebarState {
     expanded: boolean;      // Expandido inicialmente
@@ -658,7 +666,7 @@ const customState = {
   }
   ```
 
-### Formato de Persistência no localStorage
+### Formato de Persistência no localStorage (Sidebar)
 
 Todos os estados são salvos em uma única chave `sidebar`:
 
