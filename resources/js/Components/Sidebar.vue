@@ -36,13 +36,13 @@
             sidebarPosition === 'left'
                 ? 'md:fixed md:inset-0 md:flex md:items-center md:justify-start md:z-50 md:pointer-events-none'
                 : 'md:fixed md:inset-0 md:flex md:items-center md:justify-end md:z-50 md:pointer-events-none',
-            // Mobile: respeita posição
+            // Mobile: sempre visível para permitir animação
             sidebarPosition === 'left'
-                ? isExpanded ? 'fixed inset-0 flex items-center justify-start z-50 pointer-events-none' : 'hidden lg:block'
-                : isExpanded ? 'fixed inset-0 flex items-center justify-end z-50 pointer-events-none' : 'hidden lg:block'
+                ? 'fixed inset-0 flex items-center justify-start z-50 pointer-events-none lg:block'
+                : 'fixed inset-0 flex items-center justify-end z-50 pointer-events-none lg:block'
         ]">
             <aside :class="[
-                'relative bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-hidden flex flex-col',
+                'relative bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-hidden flex flex-col transform',
                 // Desktop: bordas arredondadas quando flutuante, sem bordas quando fixado
                 isAttached ? 'lg:rounded-none' : 'lg:rounded-xl',
                 // Altura: cheia quando anexado ou mobile, automática quando flutuante desktop
@@ -50,7 +50,14 @@
                 // Posicionamento quando retraído (não anexado)
                 !isExpanded && !isAttached ? (sidebarPosition === 'left' ? 'lg:fixed lg:left-1 lg:top-1/2 lg:transform lg:-translate-y-1/2' : 'lg:fixed lg:right-1 lg:top-1/2 lg:transform lg:-translate-y-1/2') : '',
                 // Largura responsiva
-                isExpanded ? 'w-64 md:w-72' : 'w-0 lg:w-16',
+                // Mobile/tablet mantém largura para permitir animação de slide; desktop retraído usa width menor
+                isExpanded ? 'w-64 md:w-72' : 'w-64 md:w-72 lg:w-16',
+                // Animação de slide no mobile/tablet
+                isExpanded
+                    ? 'translate-x-0'
+                    : sidebarPosition === 'left'
+                        ? '-translate-x-full lg:translate-x-0'
+                        : 'translate-x-full lg:translate-x-0',
                 // Pointer events: sempre ativo no aside
                 'pointer-events-auto'
             ]" style="z-index: 10;">
@@ -209,7 +216,7 @@
                                 <div class="flex-1 min-w-0 text-left overflow-hidden" v-if="isExpanded">
                                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{
                                         userFirstName
-                                    }}</p>
+                                        }}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ user.email }}</p>
                                 </div>
                                 <i v-if="isExpanded" :class="[

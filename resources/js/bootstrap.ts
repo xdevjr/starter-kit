@@ -1,9 +1,11 @@
 import axios from "axios";
+import { useToast } from "primevue";
 
 // Type declaration for window object extensions
 declare global {
     interface Window {
         axios: typeof axios;
+        toast: ReturnType<typeof useToast>;
         loadLocale: (locale: string) => Promise<Record<string, any>>;
     }
 }
