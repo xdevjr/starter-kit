@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "xdevjr/starter-kit",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "A Laravel starter kit with Inertia.js, Vue 3, and PrimeVue.",
     "keywords": [
         "laravel",
         "framework"
