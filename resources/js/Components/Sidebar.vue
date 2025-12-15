@@ -25,21 +25,16 @@
         <!-- Sidebar flutuante Desktop / Slide-in Mobile -->
         <div :class="[
             'transition-all duration-300',
-            // Quando ANEXADO: fica sticky ocupando espaço no flex
+            // Desktop: sticky se anexado, fixed left/right se flutuante
             isAttached
                 ? 'lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:z-50'
-                // Quando NÃO ANEXADO: flutuante fixo
                 : sidebarPosition === 'left'
                     ? 'lg:fixed lg:left-2 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50'
-                    : 'lg:fixed lg:right-2 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50',
-            // Tablet: drawer overlay
+                    : 'lg:fixed lg:right-6 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:z-50',
+            // Mobile/tablet: sempre overlay, respeita posição
             sidebarPosition === 'left'
-                ? 'md:fixed md:inset-0 md:flex md:items-center md:justify-start md:z-50 md:pointer-events-none'
-                : 'md:fixed md:inset-0 md:flex md:items-center md:justify-end md:z-50 md:pointer-events-none',
-            // Mobile: sempre visível para permitir animação
-            sidebarPosition === 'left'
-                ? 'fixed inset-0 flex items-center justify-start z-50 pointer-events-none lg:block'
-                : 'fixed inset-0 flex items-center justify-end z-50 pointer-events-none lg:block'
+                ? 'fixed inset-0 flex items-center justify-start z-50 pointer-events-none md:fixed md:inset-0 md:flex md:items-center md:justify-start md:z-50 md:pointer-events-none'
+                : 'fixed inset-0 flex items-center justify-end z-50 pointer-events-none md:fixed md:inset-0 md:flex md:items-center md:justify-end md:z-50 md:pointer-events-none'
         ]">
             <aside :class="[
                 'relative bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-300 overflow-hidden flex flex-col transform',
@@ -84,10 +79,10 @@
                                     ]" />
                                 </button>
                             </Transition>
-                            <!-- Botão para alternar posição esquerda/direita -->
+                            <!-- Botão para alternar posição esquerda/direita (visível em todas as telas) -->
                             <Transition name="fade">
                                 <button v-if="isExpanded" @click="togglePosition"
-                                    class="hidden lg:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer items-center justify-center shrink-0"
+                                    class="flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer items-center justify-center shrink-0"
                                     :title="sidebarPosition === 'left' ? 'Mover para direita' : 'Mover para esquerda'">
                                     <i :class="[
                                         'text-gray-600 dark:text-gray-400 text-sm',
